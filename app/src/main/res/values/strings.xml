@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">CinemaPhovlMobile</string>
+
+    <!-- Login y Register -->
+    <string name="edt_email">Ejemplo@gmail.com</string>
+    <string name="edt_password">Contraseña</string>
+    <string name="edt_name">Nombre</string>
+    <string name="edt_confirm_password">Confirmar Contraseña</string>
+
+    <string name="txt_email">Email:</string>
+    <string name="txt_password">Contraseña:</string>
+    <string name="txt_name">Nombre:</string>
+    <string name="txt_confirm_password">Confirmar Contraseña:</string>
+
+    <string name="btn_register">Registrarse</string>
+    <string name="btn_login">Iniciar Sesion</string>
+    <string name="txt_register">No tienes una cuenta? registrate!</string>
+
+    <!-- Pagina principal -->
+    <string name="txt_estrenos">Estrenos</string>
+    <string name="txt_reestrenos">Reestrenos</string>
+
+</resources>
