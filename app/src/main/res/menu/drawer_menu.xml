@@ -1,0 +1,23 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/menu_inicio"
+        android:title="Inicio"
+        android:icon="@drawable/ic_home" />
+
+    <group android:title="Sucursales">
+
+        <item
+            android:id="@+id/menu_sucursal_centro"
+            android:title="Sucursal Centro" />
+
+        <item
+            android:id="@+id/menu_sucursal_norte"
+            android:title="Sucursal Norte" />
+
+        <item
+            android:id="@+id/menu_sucursal_sur"
+            android:title="Sucursal Sur" />
+    </group>
+
+</menu>

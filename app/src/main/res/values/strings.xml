@@ -20,4 +20,8 @@
     <string name="txt_estrenos">Estrenos</string>
     <string name="txt_reestrenos">Reestrenos</string>
 
+    <string name="open_drawer">Abrir menú</string>
+    <string name="close_drawer">Cerrar menú</string>
+
+
 </resources>
