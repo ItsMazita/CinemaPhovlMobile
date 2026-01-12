@@ -13,6 +13,7 @@
         <!-- Fondo  -->
         <item name="android:colorBackground">@color/background</item>
         <item name="colorOnBackground">@color/onBackground</item>
+        <item name="android:statusBarColor">@color/colorPrimaryVariant</item>
 
     </style>
 
@@ -21,5 +22,7 @@
         <item name="android:textSize">16sp</item>
         <item name="android:textStyle">bold</item>
     </style>
+
+
 
 </resources>
