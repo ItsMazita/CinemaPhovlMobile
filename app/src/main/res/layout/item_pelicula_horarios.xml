@@ -1,0 +1,106 @@
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:card_view="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="12dp"
+    card_view:cardCornerRadius="12dp"
+    card_view:cardElevation="6dp">
+
+
+    <!-- Contenedor horizontal -->
+    <LinearLayout
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/colorPrimary">
+
+        <!-- Imagen de cartelera (izquierda) -->
+        <ImageView
+            android:id="@+id/imgCartelera"
+            android:layout_width="120dp"
+            android:layout_height="180dp"
+            android:scaleType="centerCrop"
+            android:contentDescription="Cartelera"
+            android:layout_marginRight="12dp"/>
+
+        <!-- Contenedor de datos (derecha) -->
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1">
+
+            <!-- Título -->
+            <TextView
+                android:id="@+id/txtTitulo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/colorSecondary"/>
+
+            <!-- Clasificación y duración -->
+            <TextView
+                android:id="@+id/txtClasificacionDuracion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textColor="@color/white"
+                android:paddingTop="2dp"/>
+
+            <!-- Sinopsis -->
+            <TextView
+                android:id="@+id/txtSinopsis"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textColor="@color/white"
+                android:paddingTop="4dp"/>
+
+            <!-- Botón de tráiler -->
+            <Button
+                android:id="@+id/btnTrailer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ver trailer"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#B22222"
+                android:layout_marginTop="6dp"/>
+
+            <!-- Horarios doblados -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Doblada"
+                android:textColor="@color/colorSecondary"
+                android:textStyle="bold"
+                android:paddingTop="8dp"/>
+
+            <LinearLayout
+                android:id="@+id/horariosDoblados"
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="4dp"/>
+
+            <!-- Horarios subtitulados -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Subtitulada"
+                android:textStyle="bold"
+                android:textColor="@color/colorSecondary"
+                android:paddingTop="8dp"/>
+
+            <LinearLayout
+                android:id="@+id/horariosSubtitulados"
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="4dp"/>
+
+        </LinearLayout>
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

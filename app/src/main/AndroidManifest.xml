@@ -14,6 +14,15 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CinemaPhovIMobile">
         <activity
+            android:name=".ui.main.BoletosActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.main.SeleccionAsientosActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.main.SucursalActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.main.ProfileActivity"
             android:exported="false" />
         <activity

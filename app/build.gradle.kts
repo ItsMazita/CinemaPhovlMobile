@@ -48,6 +48,10 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
 
+    // Glide
+    implementation(libs.glide)
+    annotationProcessor(libs.glide.compiler)
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)

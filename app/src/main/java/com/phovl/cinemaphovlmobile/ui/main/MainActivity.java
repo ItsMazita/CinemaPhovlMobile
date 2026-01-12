@@ -2,8 +2,8 @@ package com.phovl.cinemaphovlmobile.ui.main;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.widget.ImageButton;
 
-import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -16,9 +16,6 @@ import com.phovl.cinemaphovlmobile.adapter.SectionAdapter;
 import com.phovl.cinemaphovlmobile.model.Section;
 import com.phovl.cinemaphovlmobile.session.SessionManager;
 import com.phovl.cinemaphovlmobile.ui.auth.LoginActivity;
-import com.phovl.cinemaphovlmobile.ui.main.ProfileActivity;
-import android.view.Gravity;
-import android.widget.ImageButton;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,48 +41,41 @@ public class MainActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_main);
 
-        ImageButton btnProfile = findViewById(R.id.btn_profile);
-
-        btnProfile.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, ProfileActivity.class);
-            startActivity(intent);
-        });
-
-
         // Drawer
         drawerLayout = findViewById(R.id.drawer_layout);
         navigationView = findViewById(R.id.navigation_view);
 
         ImageButton btnMenu = findViewById(R.id.btn_menu);
+        btnMenu.setOnClickListener(v -> drawerLayout.openDrawer(GravityCompat.START));
 
-        btnMenu.setOnClickListener(v -> {
-            drawerLayout.openDrawer(GravityCompat.START);
+        ImageButton btnProfile = findViewById(R.id.btn_profile);
+        btnProfile.setOnClickListener(v -> {
+            // Abre la pantalla de perfil
+            startActivity(new Intent(MainActivity.this, ProfileActivity.class));
         });
-
 
         // Menú lateral
         navigationView.setNavigationItemSelectedListener(item -> {
-
             int id = item.getItemId();
 
             if (id == R.id.menu_inicio) {
+                // Ya estás en inicio
                 drawerLayout.closeDrawers();
                 return true;
 
             } else if (id == R.id.menu_sucursal_centro) {
-                irASucursal("CENTRO");
+                irASucursal(1, "Sucursal Centro");
 
             } else if (id == R.id.menu_sucursal_norte) {
-                irASucursal("NORTE");
+                irASucursal(2, "Sucursal Norte");
 
             } else if (id == R.id.menu_sucursal_sur) {
-                irASucursal("SUR");
+                irASucursal(3, "Sucursal Sur");
             }
 
             drawerLayout.closeDrawers();
             return true;
         });
-
 
         // RecyclerView principal (SECCIONES)
         RecyclerView recyclerSections = findViewById(R.id.recycler_sections);
@@ -113,10 +103,11 @@ public class MainActivity extends AppCompatActivity {
         recyclerSections.setAdapter(new SectionAdapter(sections));
     }
 
-    // Método para las sucursales
-    private void irASucursal(String sucursal) {
-
-        // Abrir la activity de esa sucuarsal
+    // Abrir pantalla de sucursal con id y nombre
+    private void irASucursal(int idSucursal, String nombreSucursal) {
+        Intent intent = new Intent(this, SucursalActivity.class);
+        intent.putExtra("idSucursal", idSucursal);
+        intent.putExtra("nombreSucursal", nombreSucursal);
+        startActivity(intent);
     }
-
 }
