@@ -43,7 +43,7 @@ public class RegisterActivity extends AppCompatActivity {
                 edtPassword.getText().toString().trim()
         );
 
-        ApiService api = RetrofitClient.getClient().create(ApiService.class);
+        ApiService api = RetrofitClient.getClient(RegisterActivity.this).create(ApiService.class);
 
         api.register(request).enqueue(new Callback<RegisterResponse>() {
             @Override

@@ -15,6 +15,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
 import com.phovl.cinemaphovlmobile.R;
 import com.phovl.cinemaphovlmobile.model.Funcion;
 import com.phovl.cinemaphovlmobile.model.PeliculaConFunciones;
@@ -68,7 +69,35 @@ public class PeliculaAdapter extends RecyclerView.Adapter<PeliculaAdapter.ViewHo
         holder.txtClasificacionDuracion.setText(p.getClasificacion() + " • " + p.getDuracion());
         holder.txtSinopsis.setText(p.getSinopsis());
 
-        Glide.with(context).load(p.getCarteleraUrl()).into(holder.imgCartelera);
+        // RequestOptions para placeholder, error y centerCrop
+        RequestOptions options = new RequestOptions()
+                .centerCrop()
+                .placeholder(R.drawable.ic_launcher_foreground)
+                .error(R.drawable.ic_launcher_foreground);
+
+        // Manejo de URL nula o vacía
+        String url = p.getCarteleraUrl();
+        if (url == null || url.trim().isEmpty()) {
+            // Cargar placeholder local si no hay URL
+            Glide.with(context)
+                    .load(R.drawable.ic_launcher_foreground)
+                    .apply(options)
+                    .into(holder.imgCartelera);
+        } else {
+            // Intentar cargar la URL remota
+            try {
+                Glide.with(context)
+                        .load(url)
+                        .apply(options)
+                        .into(holder.imgCartelera);
+            } catch (Exception e) {
+                // En caso de error inesperado, cargar placeholder
+                Glide.with(context)
+                        .load(R.drawable.ic_launcher_foreground)
+                        .apply(options)
+                        .into(holder.imgCartelera);
+            }
+        }
 
         holder.btnTrailer.setOnClickListener(v ->
                 Toast.makeText(context, "Ver tráiler de " + p.getTitulo(), Toast.LENGTH_SHORT).show()

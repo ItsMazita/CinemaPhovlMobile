@@ -1,71 +1,94 @@
 package com.phovl.cinemaphovlmobile.adapter;
 
+import android.content.Context;
 import android.graphics.Color;
+import android.util.DisplayMetrics;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-
+import android.widget.TextView;
 import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
-
+import com.phovl.cinemaphovlmobile.R;
 import com.phovl.cinemaphovlmobile.model.Asiento;
-
 import java.util.ArrayList;
 import java.util.List;
 
-public class AsientoAdapter extends RecyclerView.Adapter<AsientoAdapter.ViewHolder> {
+public class AsientoAdapter extends RecyclerView.Adapter<AsientoAdapter.VH> {
 
     private final List<Asiento> asientos;
     private final List<Asiento> seleccionados = new ArrayList<>();
     private final OnSeleccionChangeListener listener;
     private final int limite;
+    private final int spanCount;
+    private final int spacingPx;
 
     public interface OnSeleccionChangeListener {
         void onChange(List<Asiento> seleccionados);
     }
 
-    public AsientoAdapter(List<Asiento> asientos, OnSeleccionChangeListener listener, int limite) {
+    public AsientoAdapter(List<Asiento> asientos, OnSeleccionChangeListener listener, int limite, int spanCount, int spacingPx) {
         this.asientos = asientos;
         this.listener = listener;
         this.limite = limite;
+        this.spanCount = spanCount;
+        this.spacingPx = spacingPx;
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
-        Button btnAsiento;
-        public ViewHolder(Button view) {
-            super(view);
-            btnAsiento = view;
+    public static class VH extends RecyclerView.ViewHolder {
+        CardView card;
+        TextView txt;
+        public VH(@NonNull View v) {
+            super(v);
+            card = v.findViewById(R.id.card_asiento);
+            txt = v.findViewById(R.id.txt_asiento);
         }
     }
 
     @NonNull
     @Override
-    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        Button btn = new Button(parent.getContext());
-        btn.setLayoutParams(new ViewGroup.LayoutParams(80, 80)); // tamaño cuadrado
-        btn.setTextSize(10f);
-        return new ViewHolder(btn);
+    public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_asiento, parent, false);
+        return new VH(v);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Asiento asiento = asientos.get(position);
-        Button btn = holder.btnAsiento;
-        btn.setText(asiento.getId());
+    public void onBindViewHolder(@NonNull VH holder, int position) {
+        Asiento a = asientos.get(position);
+        holder.txt.setText(a.getId());
 
-        btn.setBackgroundColor(Color.GRAY);
-        btn.setEnabled(true);
+        // Ajustar tamaño del CardView para que quepan spanCount columnas
+        ViewGroup.LayoutParams lp = holder.card.getLayoutParams();
+        int itemSize = calculateItemSize(holder.card.getContext(), spanCount, spacingPx);
+        lp.width = itemSize;
+        lp.height = itemSize;
+        holder.card.setLayoutParams(lp);
 
-        btn.setOnClickListener(v -> {
-            if (seleccionados.contains(asiento)) {
-                seleccionados.remove(asiento);
-                btn.setBackgroundColor(Color.GRAY);
-            } else {
-                if (seleccionados.size() < limite) {
-                    seleccionados.add(asiento);
-                    btn.setBackgroundColor(Color.YELLOW);
-                }
+        // Estado visual
+        if (a.isOcupado()) {
+            holder.card.setCardBackgroundColor(Color.parseColor("#FF4444"));
+            holder.txt.setTextColor(Color.WHITE);
+            holder.card.setClickable(false);
+        } else if (seleccionados.contains(a)) {
+            holder.card.setCardBackgroundColor(Color.parseColor("#FFEB3B"));
+            holder.txt.setTextColor(Color.BLACK);
+            holder.card.setClickable(true);
+        } else {
+            holder.card.setCardBackgroundColor(Color.parseColor("#EEEEEE"));
+            holder.txt.setTextColor(Color.BLACK);
+            holder.card.setClickable(true);
+        }
+
+        holder.card.setOnClickListener(v -> {
+            if (a.isOcupado()) return;
+            if (seleccionados.contains(a)) seleccionados.remove(a);
+            else {
+                if (seleccionados.size() < limite) seleccionados.add(a);
+                else return;
             }
-            listener.onChange(seleccionados);
+            notifyDataSetChanged();
+            listener.onChange(new ArrayList<>(seleccionados));
         });
     }
 
@@ -75,6 +98,16 @@ public class AsientoAdapter extends RecyclerView.Adapter<AsientoAdapter.ViewHold
     }
 
     public List<Asiento> getSeleccionados() {
-        return seleccionados;
+        return new ArrayList<>(seleccionados);
+    }
+
+    private int calculateItemSize(Context ctx, int spanCount, int spacingPx) {
+        DisplayMetrics dm = ctx.getResources().getDisplayMetrics();
+        // Usamos spacingPx como padding lateral aproximado; garantizamos un mínimo de 40dp
+        int sidePadding = spacingPx * 2;
+        int totalPx = dm.widthPixels - (spacingPx * (spanCount + 1)) - sidePadding;
+        int size = totalPx / spanCount;
+        int minPx = (int) (40 * dm.density + 0.5f);
+        return Math.max(size, minPx);
     }
 }

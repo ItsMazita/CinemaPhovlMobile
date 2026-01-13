@@ -34,11 +34,15 @@ android {
 
 dependencies {
 
+    implementation(libs.zxing.core)
+    implementation(libs.cardview)
+
     // AndroidX
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.activity)
     implementation(libs.constraintlayout)
+    implementation(libs.recyclerview)
 
     // Retrofit
     implementation(libs.retrofit)
@@ -48,9 +52,15 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
 
+    // Gson (explicit)
+    implementation(libs.gson)
+
     // Glide
     implementation(libs.glide)
     annotationProcessor(libs.glide.compiler)
+
+    // Lifecycle runtime (optional but useful)
+    implementation(libs.lifecycle.runtime)
 
     // Testing
     testImplementation(libs.junit)

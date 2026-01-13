@@ -73,10 +73,13 @@ public class BoletosActivity extends AppCompatActivity {
 
         btnContinuar.setOnClickListener(v -> {
             int totalBoletos = ninos + adultos + estudiantes + mayores;
+            int totalPrecio = (ninos * PRECIO_NINOS) + (adultos * PRECIO_ADULTOS) +
+                    (estudiantes * PRECIO_ESTUDIANTES) + (mayores * PRECIO_MAYORES);
 
             Intent intent = new Intent(BoletosActivity.this, SeleccionAsientosActivity.class);
             intent.putExtra("idFuncion", idFuncion);
             intent.putExtra("totalBoletos", totalBoletos);
+            intent.putExtra("totalPrecio", totalPrecio);
             startActivity(intent);
         });
 

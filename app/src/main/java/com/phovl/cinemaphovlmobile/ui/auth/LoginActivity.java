@@ -2,6 +2,8 @@ package com.phovl.cinemaphovlmobile.ui.auth;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Base64;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -17,11 +19,16 @@ import com.phovl.cinemaphovlmobile.network.ApiService;
 import com.phovl.cinemaphovlmobile.session.SessionManager;
 import com.phovl.cinemaphovlmobile.ui.main.MainActivity;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
 public class LoginActivity extends AppCompatActivity {
+
+    private static final String TAG = "LoginActivity";
 
     private EditText edtEmail, edtPassword;
     private Button btnLogin;
@@ -59,7 +66,7 @@ public class LoginActivity extends AppCompatActivity {
         String email = edtEmail.getText().toString().trim();
         String password = edtPassword.getText().toString().trim();
 
-        ApiService api = RetrofitClient.getClient().create(ApiService.class);
+        ApiService api = RetrofitClient.getClient(this).create(ApiService.class);
         LoginRequest request = new LoginRequest(email, password);
 
         api.login(request).enqueue(new Callback<AuthResponse>() {
@@ -68,11 +75,18 @@ public class LoginActivity extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null) {
 
                     AuthResponse auth = response.body();
+                    String token = auth.getToken();
+                    String name = auth.getName();
 
-                    sessionManager.saveSession(
-                            auth.getToken(),
-                            auth.getName()
-                    );
+                    // Intentamos extraer id_usuario del JWT (payload)
+                    int userId = extractUserIdFromJwt(token);
+
+                    if (userId != -1) {
+                        sessionManager.saveSession(token, name, userId);
+                    } else {
+                        // Si no pudimos extraer id, guardamos sin id (compatibilidad)
+                        sessionManager.saveSession(token, name);
+                    }
 
                     Toast.makeText(LoginActivity.this, "Login exitoso", Toast.LENGTH_SHORT).show();
 
@@ -87,8 +101,36 @@ public class LoginActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<AuthResponse> call, Throwable t) {
+                Log.e(TAG, "login failure", t);
                 Toast.makeText(LoginActivity.this, "Error de conexión", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    /**
+     * Decodifica el payload del JWT (sin verificar) y extrae "id_usuario" o "id".
+     * Retorna -1 si no se encuentra.
+     */
+    private int extractUserIdFromJwt(String jwt) {
+        if (jwt == null) return -1;
+        try {
+            String[] parts = jwt.split("\\.");
+            if (parts.length < 2) return -1;
+            String payload = parts[1];
+            // Base64 URL decode
+            byte[] decoded = Base64.decode(payload, Base64.URL_SAFE | Base64.NO_PADDING | Base64.NO_WRAP);
+            String json = new String(decoded);
+            JSONObject obj = new JSONObject(json);
+            if (obj.has("id_usuario")) {
+                return obj.getInt("id_usuario");
+            } else if (obj.has("id")) {
+                return obj.getInt("id");
+            } else if (obj.has("userId")) {
+                return obj.getInt("userId");
+            }
+        } catch (IllegalArgumentException | JSONException e) {
+            Log.w(TAG, "No se pudo extraer id del JWT: " + e.getMessage());
+        }
+        return -1;
     }
 }

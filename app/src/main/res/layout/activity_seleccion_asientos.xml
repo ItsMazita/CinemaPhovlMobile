@@ -1,114 +1,139 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.drawerlayout.widget.DrawerLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/drawer_layout"
+    android:id="@+id/root_seleccion_asientos"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:padding="12dp"
+    android:background="@color/colorPrimaryVariant">
 
-    <!-- Contenido principal -->
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/colorPrimaryVariant">
+    <!-- Título -->
+    <TextView
+        android:id="@+id/txt_seleccion_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Selecciona tus Asientos"
+        android:textColor="@color/colorSecondary"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-        <!-- Header -->
-        <LinearLayout
-            android:id="@+id/header"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:padding="16dp"
-            android:background="@color/colorPrimary"
-            app:layout_constraintTop_toTopOf="parent">
+    <!-- Contador de boletos seleccionados -->
+    <TextView
+        android:id="@+id/txt_selected_count"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Boletos seleccionados: 0"
+        android:textColor="@color/colorSecondary"
+        android:textSize="14sp"
+        android:layout_marginTop="6dp"
+        app:layout_constraintTop_toBottomOf="@id/txt_seleccion_title"
+        app:layout_constraintStart_toStartOf="parent" />
 
-            <TextView
-                android:id="@+id/txtSucursal"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Selección de Asientos"
-                android:textColor="@color/colorSecondary"
-                android:textStyle="bold"
-                android:textSize="20sp"
-                android:gravity="center"/>
+    <!-- Indicador de pantalla -->
+    <TextView
+        android:id="@+id/txt_pantalla"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="PANTALLA"
+        android:textAlignment="center"
+        android:textStyle="bold"
+        android:textSize="14sp"
+        android:background="@color/colorSecondary"
+        android:textColor="@color/black"
+        android:padding="8dp"
+        android:layout_marginTop="12dp"
+        app:layout_constraintTop_toBottomOf="@id/txt_selected_count"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-        </LinearLayout>
+    <!-- RecyclerView para la grilla de asientos -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler_asientos_grid"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:clipToPadding="false"
+        android:padding="8dp"
+        android:background="@color/colorPrimaryVariant"
+        app:layout_constraintTop_toBottomOf="@id/txt_pantalla"
+        app:layout_constraintBottom_toTopOf="@id/legend_container"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-        <!-- Pantalla -->
+    <!-- Leyenda -->
+    <LinearLayout
+        android:id="@+id/legend_container"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="8dp"
+        app:layout_constraintBottom_toTopOf="@+id/btn_confirmar_asientos"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <View
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:background="#FF4444" />
+
         <TextView
-            android:id="@+id/txtPantalla"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="PANTALLA"
-            android:textColor="@color/black"
-            android:gravity="center"
-            android:background="@android:color/white"
-            android:padding="8dp"
-            android:textStyle="bold"
-            app:layout_constraintTop_toBottomOf="@id/header"
-            app:layout_constraintBottom_toTopOf="@id/recycler_asientos"/>
+            android:text="  Ocupado"
+            android:textColor="@color/colorSecondary"
+            android:layout_marginEnd="16dp" />
 
-        <!-- Grid de Asientos -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recycler_asientos"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:padding="8dp"
-            app:layout_constraintTop_toBottomOf="@id/txtPantalla"
-            app:layout_constraintBottom_toTopOf="@id/txtBoletos"/>
+        <View
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:background="#CCCCCC" />
 
-        <!-- Contador de boletos -->
         <TextView
-            android:id="@+id/txtBoletos"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Boletos seleccionados: 0"
+            android:text="  Disponible"
             android:textColor="@color/colorSecondary"
-            android:textSize="16sp"
-            android:gravity="center"
-            app:layout_constraintTop_toBottomOf="@id/recycler_asientos"
-            app:layout_constraintBottom_toTopOf="@id/leyenda"/>
+            android:layout_marginEnd="16dp" />
 
-        <!-- Leyenda -->
-        <LinearLayout
-            android:id="@+id/leyenda"
-            android:layout_width="match_parent"
+        <View
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:background="#FFEB3B" />
+
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:padding="8dp"
-            app:layout_constraintTop_toBottomOf="@id/txtBoletos"
-            app:layout_constraintBottom_toTopOf="@id/btn_confirmar">
+            android:text="  Seleccionado"
+            android:textColor="@color/colorSecondary"/>
+    </LinearLayout>
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Ocupado"
-                android:textColor="@android:color/white"
-                android:background="#FF0000"
-                android:padding="4dp"
-                android:layout_marginEnd="16dp"/>
+    <!-- Botón confirmar -->
+    <Button
+        android:id="@+id/btn_confirmar_asientos"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Confirmar Asientos"
+        android:backgroundTint="@color/colorSecondary"
+        android:textColor="@color/black"
+        android:enabled="false"
+        android:layout_marginTop="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Disponible"
-                android:textColor="@android:color/white"
-                android:background="#AAAAAA"
-                android:padding="4dp"/>
-        </LinearLayout>
+    <!-- ProgressBar (centrado sobre la grilla cuando carga) -->
+    <ProgressBar
+        android:id="@+id/progress_asientos"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="@id/recycler_asientos_grid"
+        app:layout_constraintBottom_toBottomOf="@id/recycler_asientos_grid"
+        app:layout_constraintStart_toStartOf="@id/recycler_asientos_grid"
+        app:layout_constraintEnd_toEndOf="@id/recycler_asientos_grid" />
 
-        <!-- Botón confirmar -->
-        <Button
-            android:id="@+id/btn_confirmar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Confirmar Asientos"
-            android:background="@color/colorSecondary"
-            android:textColor="@color/colorSecondary"
-            app:layout_constraintBottom_toBottomOf="parent"/>
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-</androidx.drawerlayout.widget.DrawerLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

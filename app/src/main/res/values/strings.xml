@@ -23,5 +23,11 @@
     <string name="open_drawer">Abrir menú</string>
     <string name="close_drawer">Cerrar menú</string>
 
+    <string name="menu">Menú</string>
+    <string name="profile">Perfil</string>
+    <string name="estrenos">Estrenos</string>
+    <string name="reestrenos">Reestrenos</string>
+    <string name="preventa">Pre‑venta</string>
+
 
 </resources>

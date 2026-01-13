@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="true"
@@ -13,33 +14,39 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.CinemaPhovIMobile">
+
         <activity
             android:name=".ui.main.BoletosActivity"
             android:exported="false" />
+
         <activity
             android:name=".ui.main.SeleccionAsientosActivity"
             android:exported="false" />
+
         <activity
             android:name=".ui.main.SucursalActivity"
             android:exported="false" />
+
         <activity
             android:name=".ui.main.ProfileActivity"
             android:exported="false" />
+
         <activity
             android:name=".ui.auth.RegisterActivity"
             android:exported="false" />
+
         <activity
             android:name=".ui.auth.LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
         <activity
             android:name=".ui.main.MainActivity"
-            android:exported="true" />
+            android:exported="false" />
     </application>
 
 </manifest>

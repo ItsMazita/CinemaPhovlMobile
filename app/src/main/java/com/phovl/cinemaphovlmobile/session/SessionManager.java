@@ -9,6 +9,7 @@ public class SessionManager {
     private static final String KEY_TOKEN = "token";
     private static final String KEY_LOGGED_IN = "logged_in";
     private static final String KEY_USER_NAME = "user_name";
+    private static final String KEY_USER_ID = "user_id";
 
     private SharedPreferences prefs;
     private SharedPreferences.Editor editor;
@@ -18,6 +19,20 @@ public class SessionManager {
         editor = prefs.edit();
     }
 
+    /**
+     * Guarda sesión con token, nombre y id de usuario.
+     */
+    public void saveSession(String token, String userName, int userId) {
+        editor.putString(KEY_TOKEN, token);
+        editor.putString(KEY_USER_NAME, userName);
+        editor.putInt(KEY_USER_ID, userId);
+        editor.putBoolean(KEY_LOGGED_IN, true);
+        editor.apply();
+    }
+
+    /**
+     * Versión antigua compatible (si no tienes userId disponible).
+     */
     public void saveSession(String token, String userName) {
         editor.putString(KEY_TOKEN, token);
         editor.putString(KEY_USER_NAME, userName);
@@ -35,6 +50,10 @@ public class SessionManager {
 
     public String getUserName() {
         return prefs.getString(KEY_USER_NAME, "Usuario");
+    }
+
+    public int getUserId() {
+        return prefs.getInt(KEY_USER_ID, -1);
     }
 
     public void logout() {

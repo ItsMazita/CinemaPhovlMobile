@@ -1,22 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Colores base -->
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <!-- Primarios -->
+    <color name="colorPrimary">#6A21BD</color>6A1B9AFF
+    <color name="colorPrimaryVariant">#4A148C</color>4A148CFF
+    <color name="colorOnPrimary">#FFFFFF</color>
 
-    <!-- Paleta principal -->
-    <color name="colorPrimary">#5A0A78</color>
-    <color name="colorPrimaryVariant">#3D0652</color>
-    <color name="colorOnPrimary">#FFFFFFFF</color>
+    <!-- Secundarios -->
+    <color name="colorSecondary">#FFEB3B</color>
+    <color name="colorSecondaryVariant">#FBC02D</color>
+    <color name="colorOnSecondary">#000000</color>
 
-    <!-- Paleta secundaria -->
-    <color name="colorSecondary">#F1E208</color>
-    <color name="colorSecondaryVariant">#C7B800</color>
-    <color name="colorOnSecondary">#FF000000</color>
+    <!-- Fondo / texto sobre fondo -->
+    <color name="background">#FFFFFF</color>
+    <color name="onBackground">#212121</color>
 
-    <!-- Fondo y texto -->
-    <color name="background">#FFFFFFFF</color>
-    <color name="onBackground">#FF000000</color>
-
-
+    <!-- Colores auxiliares -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="grayLight">#CCCCCC</color>
+    <color name="redError">#FF4444</color>
+    <color name="colorPrimaryDark">#4A148C</color>
 </resources>
