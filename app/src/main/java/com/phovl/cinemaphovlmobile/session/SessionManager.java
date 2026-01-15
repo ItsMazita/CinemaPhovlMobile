@@ -31,7 +31,7 @@ public class SessionManager {
     }
 
     /**
-     * Versión antigua compatible (si no tienes userId disponible).
+     * Versión antigua compatible.
      */
     public void saveSession(String token, String userName) {
         editor.putString(KEY_TOKEN, token);
