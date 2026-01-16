@@ -3,8 +3,11 @@ package com.phovl.cinemaphovlmobile.ui.main;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.DashPathEffect;
 import android.graphics.Paint;
+import android.graphics.Typeface;
 import android.graphics.pdf.PdfDocument;
 import android.net.Uri;
 import android.os.Build;
@@ -42,10 +45,15 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 import okhttp3.ResponseBody;
@@ -74,6 +82,9 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
     private static final char[] FILAS = { 'A','B','C','D','E' };
 
     private static final int REQ_PAYPAL = 1234;
+
+    // Executor para generar PDFs en background
+    private final Executor pdfExecutor = Executors.newSingleThreadExecutor();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -228,8 +239,8 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
                                     for (com.phovl.cinemaphovlmobile.network.model.TicketDto t : tickets) {
                                         qrCodes.add(t.codigo_qr);
                                     }
-                                    // Generar un PDF por ticket/asiento
-                                    generarPdfPorTicket(seleccionados, qrCodes);
+                                    // Generar un PDF por ticket/asiento en background
+                                    pdfExecutor.execute(() -> generarPdfPorTicket(seleccionados, qrCodes, orderId));
                                 } else {
                                     Toast.makeText(SeleccionAsientosActivity.this,
                                             "Compra registrada pero no se devolvieron tickets",
@@ -421,16 +432,18 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
 
     /**
      * Genera un PDF por cada asiento/ticket y lo guarda en Descargas/CinemaPHOVL.
-     * Cada PDF contiene la información del ticket y su QR correspondiente.
+     * Diseño mejorado: header con color, logo (si existe), QR grande, perforación y talón.
+     * Ejecutar en background (pdfExecutor).
      */
     private void generarPdfPorTicket(
             List<Asiento> seleccionados,
-            List<String> qrCodes
+            List<String> qrCodes,
+            String orderId
     ) {
         if (seleccionados == null || seleccionados.isEmpty()) {
-            Toast.makeText(this,
+            runOnUiThread(() -> Toast.makeText(this,
                     "No hay asientos seleccionados para generar PDF",
-                    Toast.LENGTH_SHORT).show();
+                    Toast.LENGTH_SHORT).show());
             return;
         }
 
@@ -446,57 +459,13 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
             PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(595, 842, 1).create();
             PdfDocument.Page page = document.startPage(pageInfo);
             Canvas canvas = page.getCanvas();
-            Paint paint = new Paint();
-            paint.setTextSize(14f);
 
-            int marginLeft = 40;
-            int x = marginLeft;
-            int y = 60;
-
-            // Encabezado
-            paint.setFakeBoldText(true);
-            canvas.drawText("Cinema PHOVL - Ticket", x, y, paint);
-            paint.setFakeBoldText(false);
-            y += 30;
-
-            // Información básica
-            canvas.drawText("Función ID: " + idFuncion, x, y, paint);
-            y += 18;
-            canvas.drawText("Usuario ID: " + sessionManager.getUserId(), x, y, paint);
-            y += 18;
-            canvas.drawText("Asiento: " + a.getId(), x, y, paint);
-            y += 18;
-
-            // Precio por boleto (si totalPrecio está definido, dividir entre boletos)
-            String precioStr = "N/A";
             try {
-                if (totalPrecio > 0 && totalBoletos > 0) {
-                    double precioUnit = (double) totalPrecio / (double) totalBoletos;
-                    precioStr = String.format("%.2f MXN", precioUnit);
-                } else {
-                    precioStr = "5.00 MXN";
-                }
-            } catch (Exception ignored) {}
-            canvas.drawText("Precio estimado: " + precioStr, x, y, paint);
-            y += 30;
-
-            // QR
-            int qrSizePx = 200;
-            try {
-                Bitmap qrBitmap = generarBitmapQr(qrContent, qrSizePx, qrSizePx);
-                if (qrBitmap != null) {
-                    int qrX = pageInfo.getPageWidth() - marginLeft - qrSizePx;
-                    int qrY = y - 18;
-                    canvas.drawBitmap(qrBitmap, qrX, qrY, null);
-                }
+                // Dibuja plantilla mejorada
+                drawTicketPage(canvas, pageInfo, idFuncion, a, qrContent, orderId);
             } catch (Exception e) {
-                Log.w(TAG, "Error generando QR para " + a.getId(), e);
+                Log.w(TAG, "Error dibujando ticket para " + a.getId(), e);
             }
-
-            // Texto con código QR
-            paint.setTextSize(10f);
-            canvas.drawText("Código QR: " + qrContent, x, y + 12, paint);
-            paint.setTextSize(14f);
 
             document.finishPage(page);
 
@@ -539,7 +508,8 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
 
             } catch (Exception e) {
                 Log.e(TAG, "Error al guardar PDF " + displayName, e);
-                runOnUiThread(() -> Toast.makeText(this, "Error al guardar PDF: " + displayName, Toast.LENGTH_LONG).show());
+                final String nameErr = displayName;
+                runOnUiThread(() -> Toast.makeText(this, "Error al guardar PDF: " + nameErr, Toast.LENGTH_LONG).show());
             } finally {
                 try {
                     if (out != null) out.close();
@@ -558,6 +528,123 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
             startActivity(intent);
             finish();
         });
+    }
+
+    /**
+     * Dibuja la plantilla mejorada del ticket en el canvas.
+     */
+    private void drawTicketPage(Canvas canvas, PdfDocument.PageInfo pageInfo, int idFuncion, Asiento a, String qrContent, String orderId) {
+        Paint paint = new Paint();
+        int margin = 36;
+        int x = margin;
+        int y = 48;
+
+        // Fondo blanco limpio
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(0xFFFFFFFF);
+        canvas.drawRect(0, 0, pageInfo.getPageWidth(), pageInfo.getPageHeight(), paint);
+
+        // Header background (brand color)
+        paint.setColor(0xFF6A21BD);
+        canvas.drawRect(0, 0, pageInfo.getPageWidth(), 88, paint);
+
+        // Logo (si existe)
+        try {
+            Bitmap logo = BitmapFactory.decodeResource(getResources(), R.drawable.logo);
+            if (logo != null) {
+                int logoH = 56;
+                int logoW = (int) (logo.getWidth() * (logoH / (float) logo.getHeight()));
+                Bitmap scaled = Bitmap.createScaledBitmap(logo, logoW, logoH, true);
+                canvas.drawBitmap(scaled, margin, 16, null);
+            }
+        } catch (Exception ignored) {}
+
+        // Title
+        paint.setColor(0xFFFFEB3B);
+        paint.setTextSize(20f);
+        paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        canvas.drawText("Cinema PHOVL", margin + 120, 52, paint);
+
+        // Reset paint for body
+        paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
+        paint.setColor(0xFF000000);
+        paint.setTextSize(12f);
+
+        y = 120;
+        canvas.drawText("Función ID: " + idFuncion, x, y, paint);
+        y += 18;
+        canvas.drawText("Asiento: " + a.getId(), x, y, paint);
+        y += 18;
+        canvas.drawText("Usuario ID: " + sessionManager.getUserId(), x, y, paint);
+        y += 18;
+        canvas.drawText("Fecha/Hora: " + getFormattedDateTime(), x, y, paint);
+        y += 24;
+
+        // Price box
+        paint.setColor(0xFF6A21BD); // Amarillo dorado
+        canvas.drawRect(x, y, x + 160, y + 40, paint);
+        paint.setColor(0xFFFFEB3B);
+        paint.setTextSize(14f);
+        paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        canvas.drawText("Precio: " + precioStrFor(a), x + 8, y + 26, paint);
+        paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
+        paint.setTextSize(12f);
+        y += 64;
+
+        // QR grande a la derecha
+        int qrSize = 220;
+        Bitmap qr = generarBitmapQr(qrContent, qrSize, qrSize);
+        if (qr != null) {
+            int qrX = pageInfo.getPageWidth() - margin - qrSize;
+            int qrY = 120;
+            canvas.drawBitmap(qr, qrX, qrY, null);
+
+            // Código legible debajo del QR
+            paint.setColor(0xFF000000);
+            paint.setTextSize(10f);
+            canvas.drawText("Código: " + qrContent, qrX, qrY + qrSize + 18, paint);
+        } else {
+            paint.setTextSize(10f);
+            canvas.drawText("Código: " + qrContent, pageInfo.getPageWidth() - margin - 220, 120 + 220 + 18, paint);
+        }
+
+        // Perforation line (dashed)
+        Paint dashPaint = new Paint();
+        dashPaint.setColor(0xFF9E9E9E);
+        dashPaint.setStyle(Paint.Style.STROKE);
+        dashPaint.setStrokeWidth(2f);
+        dashPaint.setPathEffect(new DashPathEffect(new float[]{10,6}, 0));
+        float yPerforation = pageInfo.getPageHeight() - 160;
+        canvas.drawLine(margin, yPerforation, pageInfo.getPageWidth() - margin, yPerforation, dashPaint);
+
+        // Talón (below perforation)
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(0xFFFFFFFF);
+        canvas.drawRect(margin, yPerforation + 8, pageInfo.getPageWidth() - margin, pageInfo.getPageHeight() - 24, paint);
+        paint.setColor(0xFF000000);
+        paint.setTextSize(12f);
+        canvas.drawText("TALÓN - Presentar en acceso", margin + 8, yPerforation + 36, paint);
+        canvas.drawText("Order: " + (orderId != null ? orderId : "N/A"), margin + 8, yPerforation + 56, paint);
+
+        // Small legal text
+        paint.setTextSize(8f);
+        paint.setColor(0xFF616161);
+        canvas.drawText("No reembolsable. Presenta este ticket en taquilla.", margin + 8, pageInfo.getPageHeight() - 40, paint);
+    }
+
+    private String getFormattedDateTime() {
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
+        return sdf.format(new Date());
+    }
+
+    private String precioStrFor(Asiento a) {
+        try {
+            if (totalPrecio > 0 && totalBoletos > 0) {
+                double precioUnit = (double) totalPrecio / (double) totalBoletos;
+                return String.format(Locale.getDefault(), "%.2f MXN", precioUnit);
+            }
+        } catch (Exception ignored) {}
+        return "5.00 MXN";
     }
 
     private Bitmap generarBitmapQr(String text, int width, int height) {
