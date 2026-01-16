@@ -228,7 +228,8 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
                                     for (com.phovl.cinemaphovlmobile.network.model.TicketDto t : tickets) {
                                         qrCodes.add(t.codigo_qr);
                                     }
-                                    generarPdfCompraEnDescargas(seleccionados, qrCodes);
+                                    // Generar un PDF por ticket/asiento
+                                    generarPdfPorTicket(seleccionados, qrCodes);
                                 } else {
                                     Toast.makeText(SeleccionAsientosActivity.this,
                                             "Compra registrada pero no se devolvieron tickets",
@@ -418,7 +419,11 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
         });
     }
 
-    private void generarPdfCompraEnDescargas(
+    /**
+     * Genera un PDF por cada asiento/ticket y lo guarda en Descargas/CinemaPHOVL.
+     * Cada PDF contiene la información del ticket y su QR correspondiente.
+     */
+    private void generarPdfPorTicket(
             List<Asiento> seleccionados,
             List<String> qrCodes
     ) {
@@ -429,129 +434,130 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
             return;
         }
 
-        String displayName =
-                "ticket_compra_funcion_" + idFuncion + "_" + System.currentTimeMillis() + ".pdf";
-
-        PdfDocument document = new PdfDocument();
-        PdfDocument.PageInfo pageInfo =
-                new PdfDocument.PageInfo.Builder(595, 842, 1).create();
-        PdfDocument.Page page = document.startPage(pageInfo);
-        Canvas canvas = page.getCanvas();
-        Paint paint = new Paint();
-        paint.setTextSize(14f);
-
-        int marginLeft = 40;
-        int x = marginLeft;
-        int y = 60;
-
-        canvas.drawText("Cinema PHOVL - Comprobante de compra", x, y, paint);
-        y += 30;
-        canvas.drawText("Función ID: " + idFuncion, x, y, paint);
-        y += 20;
-        canvas.drawText("Usuario ID: " + sessionManager.getUserId(), x, y, paint);
-        y += 20;
-        canvas.drawText("Total boletos solicitados: " + totalBoletos, x, y, paint);
-        y += 20;
-        canvas.drawText("Total pagado estimado: $" + totalPrecio + " MXN", x, y, paint);
-        y += 30;
-        canvas.drawText("Asientos seleccionados:", x, y, paint);
-        y += 20;
-
-        int qrSizePx = 80;
+        int generated = 0;
 
         for (int i = 0; i < seleccionados.size(); i++) {
             Asiento a = seleccionados.get(i);
-            String qrContent =
-                    (i < qrCodes.size()) ? qrCodes.get(i) : UUID.randomUUID().toString();
+            String qrContent = (i < qrCodes.size()) ? qrCodes.get(i) : UUID.randomUUID().toString();
 
-            canvas.drawText("- Asiento: " + a.getId(), x, y + 12, paint);
+            String displayName = "ticket_funcion_" + idFuncion + "_asiento_" + a.getId() + "_" + System.currentTimeMillis() + ".pdf";
 
+            PdfDocument document = new PdfDocument();
+            PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(595, 842, 1).create();
+            PdfDocument.Page page = document.startPage(pageInfo);
+            Canvas canvas = page.getCanvas();
+            Paint paint = new Paint();
+            paint.setTextSize(14f);
+
+            int marginLeft = 40;
+            int x = marginLeft;
+            int y = 60;
+
+            // Encabezado
+            paint.setFakeBoldText(true);
+            canvas.drawText("Cinema PHOVL - Ticket", x, y, paint);
+            paint.setFakeBoldText(false);
+            y += 30;
+
+            // Información básica
+            canvas.drawText("Función ID: " + idFuncion, x, y, paint);
+            y += 18;
+            canvas.drawText("Usuario ID: " + sessionManager.getUserId(), x, y, paint);
+            y += 18;
+            canvas.drawText("Asiento: " + a.getId(), x, y, paint);
+            y += 18;
+
+            // Precio por boleto (si totalPrecio está definido, dividir entre boletos)
+            String precioStr = "N/A";
+            try {
+                if (totalPrecio > 0 && totalBoletos > 0) {
+                    double precioUnit = (double) totalPrecio / (double) totalBoletos;
+                    precioStr = String.format("%.2f MXN", precioUnit);
+                } else {
+                    precioStr = "5.00 MXN";
+                }
+            } catch (Exception ignored) {}
+            canvas.drawText("Precio estimado: " + precioStr, x, y, paint);
+            y += 30;
+
+            // QR
+            int qrSizePx = 200;
             try {
                 Bitmap qrBitmap = generarBitmapQr(qrContent, qrSizePx, qrSizePx);
                 if (qrBitmap != null) {
                     int qrX = pageInfo.getPageWidth() - marginLeft - qrSizePx;
-                    int qrY = y - 6;
+                    int qrY = y - 18;
                     canvas.drawBitmap(qrBitmap, qrX, qrY, null);
                 }
             } catch (Exception e) {
                 Log.w(TAG, "Error generando QR para " + a.getId(), e);
             }
 
+            // Texto con código QR
             paint.setTextSize(10f);
-            canvas.drawText("QR: " + qrContent, x + 120, y + 12, paint);
+            canvas.drawText("Código QR: " + qrContent, x, y + 12, paint);
             paint.setTextSize(14f);
 
-            y += Math.max(qrSizePx, 18) + 8;
+            document.finishPage(page);
 
-            if (y > pageInfo.getPageHeight() - 80) {
-                document.finishPage(page);
-                pageInfo = new PdfDocument.PageInfo.Builder(
-                        595, 842, document.getPages().size() + 1
-                ).create();
-                page = document.startPage(pageInfo);
-                canvas = page.getCanvas();
-                paint.setTextSize(14f);
-                y = 60;
+            OutputStream out = null;
+            Uri uri = null;
+
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ContentValues values = new ContentValues();
+                    values.put(MediaStore.Downloads.DISPLAY_NAME, displayName);
+                    values.put(MediaStore.Downloads.MIME_TYPE, "application/pdf");
+                    values.put(MediaStore.Downloads.RELATIVE_PATH,
+                            Environment.DIRECTORY_DOWNLOADS + "/CinemaPHOVL");
+
+                    uri = getContentResolver().insert(
+                            MediaStore.Downloads.EXTERNAL_CONTENT_URI, values
+                    );
+                    if (uri == null) throw new IOException("No se pudo crear Uri en MediaStore");
+                    out = getContentResolver().openOutputStream(uri);
+                } else {
+                    File downloadsDir =
+                            Environment.getExternalStoragePublicDirectory(
+                                    Environment.DIRECTORY_DOWNLOADS
+                            );
+                    File folder = new File(downloadsDir, "CinemaPHOVL");
+                    if (!folder.exists() && !folder.mkdirs()) {
+                        Log.w(TAG, "No se pudo crear carpeta Descargas/CinemaPHOVL");
+                    }
+                    File file = new File(folder, displayName);
+                    out = new FileOutputStream(file);
+                    uri = Uri.fromFile(file);
+                }
+
+                if (out == null) throw new IOException("OutputStream nulo al escribir PDF");
+
+                document.writeTo(out);
+                out.flush();
+                generated++;
+                Log.d(TAG, "PDF guardado: " + displayName + " uri=" + uri);
+
+            } catch (Exception e) {
+                Log.e(TAG, "Error al guardar PDF " + displayName, e);
+                runOnUiThread(() -> Toast.makeText(this, "Error al guardar PDF: " + displayName, Toast.LENGTH_LONG).show());
+            } finally {
+                try {
+                    if (out != null) out.close();
+                } catch (Exception ignored) {}
+                document.close();
             }
         }
 
-        document.finishPage(page);
+        final int finalGenerated = generated;
+        runOnUiThread(() -> {
+            Toast.makeText(this, "Se generaron " + finalGenerated + " PDFs en Descargas/CinemaPHOVL", Toast.LENGTH_LONG).show();
 
-        OutputStream out = null;
-        Uri uri = null;
-
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                ContentValues values = new ContentValues();
-                values.put(MediaStore.Downloads.DISPLAY_NAME, displayName);
-                values.put(MediaStore.Downloads.MIME_TYPE, "application/pdf");
-                values.put(MediaStore.Downloads.RELATIVE_PATH,
-                        Environment.DIRECTORY_DOWNLOADS + "/CinemaPHOVL");
-
-                uri = getContentResolver().insert(
-                        MediaStore.Downloads.EXTERNAL_CONTENT_URI, values
-                );
-                out = getContentResolver().openOutputStream(uri);
-            } else {
-                File downloadsDir =
-                        Environment.getExternalStoragePublicDirectory(
-                                Environment.DIRECTORY_DOWNLOADS
-                        );
-                File folder = new File(downloadsDir, "CinemaPHOVL");
-                if (!folder.exists()) folder.mkdirs();
-                File file = new File(folder, displayName);
-                out = new FileOutputStream(file);
-                uri = Uri.fromFile(file);
-            }
-
-            document.writeTo(out);
-            out.flush();
-
-            Toast.makeText(this,
-                    "PDF guardado en Descargas",
-                    Toast.LENGTH_LONG).show();
-
-            Intent intent = new Intent(
-                    SeleccionAsientosActivity.this,
-                    com.phovl.cinemaphovlmobile.ui.main.MainActivity.class
-            );
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    | Intent.FLAG_ACTIVITY_NEW_TASK
-                    | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            // Regresar a MainActivity
+            Intent intent = new Intent(SeleccionAsientosActivity.this, com.phovl.cinemaphovlmobile.ui.main.MainActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             startActivity(intent);
             finish();
-
-        } catch (Exception e) {
-            Log.e(TAG, "Error al guardar PDF", e);
-            Toast.makeText(this,
-                    "Error al guardar PDF",
-                    Toast.LENGTH_LONG).show();
-        } finally {
-            try {
-                if (out != null) out.close();
-            } catch (Exception ignored) {}
-            document.close();
-        }
+        });
     }
 
     private Bitmap generarBitmapQr(String text, int width, int height) {
