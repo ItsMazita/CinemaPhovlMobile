@@ -30,8 +30,13 @@ import com.google.zxing.qrcode.QRCodeWriter;
 import com.phovl.cinemaphovlmobile.R;
 import com.phovl.cinemaphovlmobile.adapter.AsientoAdapter;
 import com.phovl.cinemaphovlmobile.model.Asiento;
+import com.phovl.cinemaphovlmobile.network.ApiService;
+import com.phovl.cinemaphovlmobile.network.RetrofitClient;
 import com.phovl.cinemaphovlmobile.session.SessionManager;
 import com.phovl.cinemaphovlmobile.util.GridSpacingItemDecoration;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -41,6 +46,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
+import java.util.function.Consumer;
+
+import okhttp3.ResponseBody;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class SeleccionAsientosActivity extends AppCompatActivity {
 
@@ -57,6 +68,9 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
     private int totalPrecio;
 
     private SessionManager sessionManager;
+
+    // Mantener la lista original para poder reemplazarla/actualizarla
+    private List<Asiento> asientos;
 
     // Configuración de la sala (filas)
     private static final char[] FILAS = {
@@ -104,8 +118,8 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
         recyclerAsientos.setPadding(spacingPx, spacingPx, spacingPx, spacingPx);
         recyclerAsientos.setClipToPadding(false);
 
-        // Generar asientos dinámicamente usando spanCount como columnas
-        List<Asiento> asientos = generarAsientosMock(spanCount);
+        // Generar asientos dinámicamente usando spanCount como columnas (prueba/local)
+        asientos = generarAsientosMock(spanCount);
 
         // Log para depuración: confirmar que la lista tiene elementos
         Log.d(TAG, "asientos.size() = " + asientos.size() + " (spanCount=" + spanCount + ")");
@@ -122,6 +136,9 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
         recyclerAsientos.setAdapter(asientoAdapter);
         asientoAdapter.notifyDataSetChanged();
 
+        // Antes de permitir pagar, refrescamos ocupados desde servidor (si hay red)
+        fetchOcupadosAndMark();
+
         // Nuevo flujo: abrir pantalla de pago en lugar de generar PDF inmediatamente
         btnConfirmar.setOnClickListener(v -> {
             List<Asiento> seleccionados = asientoAdapter.getSeleccionados();
@@ -130,25 +147,33 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
                 return;
             }
 
-            // Deshabilitar botón y mostrar loading mientras se abre el pago
-            btnConfirmar.setEnabled(false);
+            // Antes de abrir el pago, volvemos a comprobar asientos ocupados (última verificación)
             showLoading(true);
+            btnConfirmar.setEnabled(false);
+            checkAsientosDisponiblesBeforePayment(seleccionados, available -> {
+                runOnUiThread(() -> {
+                    showLoading(false);
+                    btnConfirmar.setEnabled(true);
+                    if (!available) {
+                        Toast.makeText(SeleccionAsientosActivity.this, "Algunos asientos ya fueron ocupados. Se actualizaron los asientos.", Toast.LENGTH_LONG).show();
+                        fetchOcupadosAndMark();
+                        return;
+                    }
 
-            // Calcular monto total (usa totalPrecio si ya lo tienes, si no, calcula)
-            double amountDouble;
-            if (totalPrecio > 0) {
-                amountDouble = totalPrecio;
-            } else {
-                // fallback: ejemplo precio por asiento 5.00
-                amountDouble = 5.00 * seleccionados.size();
-            }
-            String amountStr = String.format("%.2f", amountDouble);
+                    // Si están disponibles, iniciar WebViewPayPalActivity
+                    double amountDouble;
+                    if (totalPrecio > 0) {
+                        amountDouble = totalPrecio;
+                    } else {
+                        amountDouble = 5.00 * seleccionados.size();
+                    }
+                    String amountStr = String.format("%.2f", amountDouble);
 
-            // Iniciar WebViewPayPalActivity para procesar el pago
-            Intent payIntent = new Intent(SeleccionAsientosActivity.this, WebViewPayPalActivity.class);
-            payIntent.putExtra(WebViewPayPalActivity.EXTRA_AMOUNT, amountStr);
-            // startActivityForResult para recibir resultado del pago
-            startActivityForResult(payIntent, REQ_PAYPAL);
+                    Intent payIntent = new Intent(SeleccionAsientosActivity.this, WebViewPayPalActivity.class);
+                    payIntent.putExtra(WebViewPayPalActivity.EXTRA_AMOUNT, amountStr);
+                    startActivityForResult(payIntent, REQ_PAYPAL);
+                });
+            });
         });
 
         // Estado inicial
@@ -164,25 +189,94 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
         btnConfirmar.setEnabled(true);
 
         if (requestCode == REQ_PAYPAL) {
-            if (data == null) {
-                Toast.makeText(this, "No se recibió respuesta del pago", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            String status = data.getStringExtra("paypal_status");
-            String orderId = data.getStringExtra("paypal_order_id");
-            Log.d(TAG, "onActivityResult paypal_status=" + status + " orderId=" + orderId);
+            if (resultCode == RESULT_OK && data != null) {
+                String status = data.getStringExtra("paypal_status");
+                String orderId = data.getStringExtra("paypal_order_id");
+                Log.d(TAG, "onActivityResult RESULT_OK paypal_status=" + status + " orderId=" + orderId);
 
-            if ("COMPLETED".equals(status)) {
-                // Pago completado: generar QR y PDF usando tu lógica existente
-                List<Asiento> seleccionados = asientoAdapter.getSeleccionados();
-                // Generar QR reales (usa tu método)
-                List<String> qrCodes = generarQrReales(seleccionados.size());
-                // Generar PDF y guardarlo en Descargas (tu método ya maneja navegación final)
-                generarPdfCompraEnDescargas(seleccionados, qrCodes);
-            } else if ("CANCELLED".equals(status)) {
+                if ("COMPLETED".equals(status)) {
+                    List<Asiento> seleccionados = asientoAdapter.getSeleccionados();
+                    if (seleccionados == null || seleccionados.isEmpty()) {
+                        Toast.makeText(this, "No hay asientos seleccionados", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    // Usar idAsientoDb directamente
+                    List<Integer> idAsientosInt = new ArrayList<>();
+                    for (Asiento a : seleccionados) {
+                        idAsientosInt.add(a.getIdAsientoDb());
+                    }
+
+                    if (idAsientosInt.isEmpty()) {
+                        Toast.makeText(this, "No se pudieron obtener los IDs numéricos de los asientos.", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+
+                    // Preparar request
+                    int idUsuario = sessionManager.getUserId();
+                    com.phovl.cinemaphovlmobile.network.model.CompraRequest req =
+                            new com.phovl.cinemaphovlmobile.network.model.CompraRequest(idFuncion, idAsientosInt, idUsuario);
+
+                    ApiService api = RetrofitClient.getClient(this).create(ApiService.class);
+
+                    showLoading(true);
+                    api.comprarTickets(req).enqueue(new Callback<com.phovl.cinemaphovlmobile.network.model.CompraResponse>() {
+                        @Override
+                        public void onResponse(Call<com.phovl.cinemaphovlmobile.network.model.CompraResponse> call, Response<com.phovl.cinemaphovlmobile.network.model.CompraResponse> response) {
+                            showLoading(false);
+                            btnConfirmar.setEnabled(true);
+                            if (response.isSuccessful() && response.body() != null) {
+                                List<com.phovl.cinemaphovlmobile.network.model.TicketDto> tickets = response.body().tickets;
+                                if (tickets != null && !tickets.isEmpty()) {
+                                    // Extraer códigos QR devueltos por el backend
+                                    List<String> qrCodes = new ArrayList<>();
+                                    for (com.phovl.cinemaphovlmobile.network.model.TicketDto t : tickets) {
+                                        qrCodes.add(t.codigo_qr);
+                                    }
+                                    // Generar PDF usando tu método existente (usa los qrCodes reales)
+                                    generarPdfCompraEnDescargas(seleccionados, qrCodes);
+                                } else {
+                                    Toast.makeText(SeleccionAsientosActivity.this, "Compra registrada pero no se devolvieron tickets", Toast.LENGTH_LONG).show();
+                                }
+                            } else {
+                                // Manejo 409 (asiento ocupado) y otros errores
+                                if (response.code() == 409) {
+                                    String body = "Asiento ocupado";
+                                    try { if (response.errorBody() != null) body = response.errorBody().string(); } catch (Exception ignored) {}
+                                    Toast.makeText(SeleccionAsientosActivity.this, "No se pudo completar la compra: " + body, Toast.LENGTH_LONG).show();
+                                    // refrescar asientos para mostrar ocupados
+                                    fetchOcupadosAndMark();
+                                    return;
+                                }
+
+                                String err = "Error registrando compra: " + response.code();
+                                try { if (response.errorBody() != null) err += " " + response.errorBody().string(); } catch (Exception ignored) {}
+                                Log.e(TAG, err);
+                                Toast.makeText(SeleccionAsientosActivity.this, err, Toast.LENGTH_LONG).show();
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(Call<com.phovl.cinemaphovlmobile.network.model.CompraResponse> call, Throwable t) {
+                            showLoading(false);
+                            btnConfirmar.setEnabled(true);
+                            Log.e(TAG, "Fallo al llamar comprarTickets: " + t.getMessage(), t);
+                            Toast.makeText(SeleccionAsientosActivity.this, "Fallo conexión: " + t.getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                    });
+
+                    return;
+                } else {
+                    Toast.makeText(this, "Resultado de pago desconocido: " + status, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            } else if (resultCode == RESULT_CANCELED) {
+                Log.d(TAG, "onActivityResult RESULT_CANCELED");
                 Toast.makeText(this, "Pago cancelado", Toast.LENGTH_SHORT).show();
+                return;
             } else {
-                Toast.makeText(this, "Resultado de pago desconocido: " + status, Toast.LENGTH_SHORT).show();
+                Log.d(TAG, "onActivityResult: resultCode=" + resultCode + " data=" + data);
+                Toast.makeText(this, "No se recibió respuesta del pago", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -193,19 +287,118 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
 
     /**
      * Genera asientos mock y marca algunos como ocupados aleatoriamente.
-     * Ahora recibe el número de columnas (spanCount) para generar la grilla correcta.
+     * Ahora asigna idAsientoDb secuencial para pruebas locales.
      */
     private List<Asiento> generarAsientosMock(int spanCount) {
         List<Asiento> list = new ArrayList<>();
         Random rnd = new Random(12345); // semilla fija para reproducibilidad
+        int dbCounter = 1;
         for (char fila : FILAS) {
             for (int c = 1; c <= spanCount; c++) {
-                String id = fila + String.valueOf(c);
+                String label = fila + String.valueOf(c);
                 boolean ocupado = rnd.nextInt(100) < 15;
-                list.add(new Asiento(id, ocupado));
+                list.add(new Asiento(dbCounter++, label, ocupado));
             }
         }
         return list;
+    }
+
+    /**
+     * Comprueba con el backend si los asientos seleccionados siguen disponibles
+     * antes de abrir la pantalla de pago.
+     */
+    private void checkAsientosDisponiblesBeforePayment(List<Asiento> seleccionados, Consumer<Boolean> callback) {
+        ApiService api = RetrofitClient.getClient(this).create(ApiService.class);
+        Call<ResponseBody> call = api.getAsientosOcupados(idFuncion);
+        call.enqueue(new Callback<ResponseBody>() {
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                try {
+                    if (!response.isSuccessful() || response.body() == null) {
+                        callback.accept(true); // no podemos comprobar, asumimos ok
+                        return;
+                    }
+                    String json = response.body().string();
+                    JSONArray arr = new JSONArray(json);
+                    List<Integer> ocupados = new ArrayList<>();
+                    for (int i = 0; i < arr.length(); i++) {
+                        Object o = arr.get(i);
+                        if (o instanceof JSONObject) {
+                            JSONObject obj = (JSONObject) o;
+                            if (obj.has("id_asiento")) ocupados.add(obj.getInt("id_asiento"));
+                            else if (obj.has("id")) ocupados.add(obj.getInt("id"));
+                        } else {
+                            try { ocupados.add(Integer.parseInt(o.toString())); } catch (Exception ignored) {}
+                        }
+                    }
+                    for (Asiento a : seleccionados) {
+                        if (ocupados.contains(a.getIdAsientoDb())) {
+                            callback.accept(false);
+                            return;
+                        }
+                    }
+                    callback.accept(true);
+                } catch (Exception e) {
+                    Log.w(TAG, "Error parseando ocupados: " + e.getMessage(), e);
+                    callback.accept(true);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                Log.w(TAG, "Fallo al obtener asientos ocupados: " + t.getMessage(), t);
+                callback.accept(true);
+            }
+        });
+    }
+
+    /**
+     * Obtiene asientos ocupados desde el backend y marca la lista del adapter.
+     */
+    private void fetchOcupadosAndMark() {
+        ApiService api = RetrofitClient.getClient(this).create(ApiService.class);
+        Call<ResponseBody> call = api.getAsientosOcupados(idFuncion);
+        call.enqueue(new Callback<ResponseBody>() {
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                try {
+                    if (!response.isSuccessful() || response.body() == null) {
+                        Log.w(TAG, "No se pudo obtener ocupados: response not successful");
+                        return;
+                    }
+                    String json = response.body().string();
+                    JSONArray arr = new JSONArray(json);
+                    List<Integer> ocupados = new ArrayList<>();
+                    for (int i = 0; i < arr.length(); i++) {
+                        Object o = arr.get(i);
+                        if (o instanceof JSONObject) {
+                            JSONObject obj = (JSONObject) o;
+                            if (obj.has("id_asiento")) ocupados.add(obj.getInt("id_asiento"));
+                            else if (obj.has("id")) ocupados.add(obj.getInt("id"));
+                        } else {
+                            try { ocupados.add(Integer.parseInt(o.toString())); } catch (Exception ignored) {}
+                        }
+                    }
+
+                    runOnUiThread(() -> {
+                        if (asientoAdapter != null) {
+                            asientoAdapter.markOcupados(ocupados);
+                            // actualizar contador y estado del botón
+                            txtSelectedCount.setText("Boletos seleccionados: " + asientoAdapter.getSeleccionados().size());
+                            btnConfirmar.setEnabled(asientoAdapter.getSeleccionados().size() == totalBoletos && totalBoletos > 0);
+                        }
+                    });
+
+                } catch (Exception e) {
+                    Log.w(TAG, "Error parseando ocupados: " + e.getMessage(), e);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                Log.w(TAG, "Fallo al obtener asientos ocupados: " + t.getMessage(), t);
+            }
+        });
     }
 
     /**
@@ -224,9 +417,6 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
      * Genera el PDF y lo guarda en la carpeta Descargas/CinemaPHOVL usando MediaStore (Android 10+).
      * Para Android < 10 escribe en Environment.DIRECTORY_DOWNLOADS (requiere permiso WRITE_EXTERNAL_STORAGE).
      * Dibuja también la imagen QR junto al texto del asiento.
-     *
-     * Nota: este método ya existía en tu código; lo mantuve intacto salvo que ahora lo llamamos
-     * desde onActivityResult cuando el pago fue COMPLETED.
      */
     private void generarPdfCompraEnDescargas(List<Asiento> seleccionados, List<String> qrCodes) {
         if (seleccionados == null || seleccionados.isEmpty()) {
@@ -305,7 +495,6 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
 
         OutputStream out = null;
         Uri uri = null;
-        boolean savedToDownloads = false;
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ContentValues values = new ContentValues();
@@ -331,7 +520,6 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
             String msg = "PDF guardado en Descargas: " + (uri != null ? uri.toString() : displayName);
             Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
             Log.d(TAG, "PDF guardado: " + msg);
-            savedToDownloads = true;
 
             // Navegar a MainActivity y limpiar la pila para evitar volver a la selección
             Intent intent = new Intent(SeleccionAsientosActivity.this, com.phovl.cinemaphovlmobile.ui.main.MainActivity.class);
@@ -354,7 +542,6 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
                         Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
                         Log.d(TAG, "PDF guardado (fallback): " + msg);
 
-                        // Navegar a MainActivity también en fallback
                         Intent intent = new Intent(SeleccionAsientosActivity.this, com.phovl.cinemaphovlmobile.ui.main.MainActivity.class);
                         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                         startActivity(intent);

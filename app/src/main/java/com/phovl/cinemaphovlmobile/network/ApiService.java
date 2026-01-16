@@ -7,11 +7,12 @@ import com.phovl.cinemaphovlmobile.model.Pelicula;
 import com.phovl.cinemaphovlmobile.model.RegisterRequest;
 import com.phovl.cinemaphovlmobile.model.RegisterResponse;
 import com.phovl.cinemaphovlmobile.model.Sucursal;
-import com.phovl.cinemaphovlmobile.model.TicketRequest;
-import com.phovl.cinemaphovlmobile.model.TicketResponse;
+import com.phovl.cinemaphovlmobile.network.model.CompraRequest;
+import com.phovl.cinemaphovlmobile.network.model.CompraResponse;
 
 import java.util.List;
 
+import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.GET;
@@ -35,6 +36,11 @@ public interface ApiService {
     @GET("api/sucursales")
     Call<List<Sucursal>> getSucursales();
 
+
+    // COMPRA: usar CompraRequest / CompraResponse (lista de tickets)
+    @POST("api/tickets/comprar")
+    Call<CompraResponse> comprarTickets(@Body CompraRequest request);
+
     // FUNCIONES por pelicula, sucursal y fecha (YYYY-MM-DD)
     @GET("api/funciones/{id_pelicula}/{id_sucursal}/{fecha}")
     Call<List<Funcion>> getFunciones(
@@ -43,7 +49,8 @@ public interface ApiService {
             @Path("fecha") String fecha
     );
 
-    // TICKETS - comprar
-    @POST("api/tickets/comprar")
-    Call<TicketResponse> comprarTicket(@Body TicketRequest request);
+    // Obtener asientos ocupados para una función (devuelve JSON array)
+    @GET("api/asientos/funciones/{id_funcion}/asientos-ocupados")
+    Call<ResponseBody> getAsientosOcupados(@Path("id_funcion") int idFuncion);
+
 }

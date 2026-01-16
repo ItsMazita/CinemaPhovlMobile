@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <!-- Color de fondo -->
+    <solid android:color="@color/colorPrimary" />
+
+    <!-- Bordes suaves -->
+    <corners android:radius="16dp" />
+
+    <!-- Sombra ligera (solo visible en API < 21 si usas elevation en CardView) -->
+    <padding android:left="8dp"
+        android:top="8dp"
+        android:right="8dp"
+        android:bottom="8dp" />
+</shape>

@@ -29,7 +29,8 @@ public class AsientoAdapter extends RecyclerView.Adapter<AsientoAdapter.VH> {
     }
 
     public AsientoAdapter(List<Asiento> asientos, OnSeleccionChangeListener listener, int limite, int spanCount, int spacingPx) {
-        this.asientos = asientos;
+        // hacemos copia defensiva para poder modificar la lista internamente
+        this.asientos = new ArrayList<>(asientos);
         this.listener = listener;
         this.limite = limite;
         this.spanCount = spanCount;
@@ -67,15 +68,15 @@ public class AsientoAdapter extends RecyclerView.Adapter<AsientoAdapter.VH> {
 
         // Estado visual
         if (a.isOcupado()) {
-            holder.card.setCardBackgroundColor(Color.parseColor("#FF4444"));
+            holder.card.setCardBackgroundColor(Color.parseColor("#FF4444")); // rojo
             holder.txt.setTextColor(Color.WHITE);
             holder.card.setClickable(false);
         } else if (seleccionados.contains(a)) {
-            holder.card.setCardBackgroundColor(Color.parseColor("#FFEB3B"));
+            holder.card.setCardBackgroundColor(Color.parseColor("#FFEB3B")); // amarillo
             holder.txt.setTextColor(Color.BLACK);
             holder.card.setClickable(true);
         } else {
-            holder.card.setCardBackgroundColor(Color.parseColor("#EEEEEE"));
+            holder.card.setCardBackgroundColor(Color.parseColor("#EEEEEE")); // gris claro
             holder.txt.setTextColor(Color.BLACK);
             holder.card.setClickable(true);
         }
@@ -101,9 +102,50 @@ public class AsientoAdapter extends RecyclerView.Adapter<AsientoAdapter.VH> {
         return new ArrayList<>(seleccionados);
     }
 
+    /**
+     * Reemplaza toda la lista de asientos (útil si recargas desde servidor).
+     */
+    public void replaceAsientos(List<Asiento> nuevaLista) {
+        asientos.clear();
+        if (nuevaLista != null) asientos.addAll(nuevaLista);
+        seleccionados.clear();
+        notifyDataSetChanged();
+        listener.onChange(new ArrayList<>(seleccionados));
+    }
+
+    /**
+     * Marca como ocupados los asientos cuyos id estén en la lista 'ocupadosIds'.
+     * También elimina de 'seleccionados' cualquier asiento que ahora esté ocupado.
+     */
+    public void markOcupados(List<Integer> ocupadosIds) {
+        if (ocupadosIds == null) ocupadosIds = new ArrayList<>();
+        boolean changed = false;
+
+        for (Asiento a : asientos) {
+            boolean shouldBeOcupado = ocupadosIds.contains(a.getIdAsientoDb());
+            if (a.isOcupado() != shouldBeOcupado) {
+                a.setOcupado(shouldBeOcupado);
+                changed = true;
+            }
+        }
+
+        List<Asiento> toRemove = new ArrayList<>();
+        for (Asiento s : seleccionados) {
+            if (ocupadosIds.contains(s.getIdAsientoDb())) toRemove.add(s);
+        }
+        if (!toRemove.isEmpty()) {
+            seleccionados.removeAll(toRemove);
+            changed = true;
+        }
+
+        if (changed) {
+            notifyDataSetChanged();
+            listener.onChange(new ArrayList<>(seleccionados));
+        }
+    }
+
     private int calculateItemSize(Context ctx, int spanCount, int spacingPx) {
         DisplayMetrics dm = ctx.getResources().getDisplayMetrics();
-        // Usamos spacingPx como padding lateral aproximado; garantizamos un mínimo de 40dp
         int sidePadding = spacingPx * 2;
         int totalPx = dm.widthPixels - (spacingPx * (spanCount + 1)) - sidePadding;
         int size = totalPx / spanCount;

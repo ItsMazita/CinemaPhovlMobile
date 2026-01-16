@@ -41,10 +41,12 @@
 
       onApprove: function(data, actions) {
         return actions.order.capture().then(function(details) {
-          const orderId = data.orderID || (details && details.id);
+          console.log("Capture result:", details);
+          const orderId = data.orderID; // usar siempre data.orderID
           document.getElementById('status').innerText = 'Pago completado: ' + orderId;
+          alert("Pago aprobado con orderId: " + orderId); // debug visual
           if (window.AndroidPay && window.AndroidPay.onPaymentCompleted) {
-            try { window.AndroidPay.onPaymentCompleted(orderId); } catch(e) { console.warn(e); }
+            window.AndroidPay.onPaymentCompleted(orderId);
           } else {
             window.location = 'paypal://success?orderId=' + encodeURIComponent(orderId);
           }
@@ -54,7 +56,7 @@
       onCancel: function (data) {
         document.getElementById('status').innerText = 'Pago cancelado';
         if (window.AndroidPay && window.AndroidPay.onPaymentCancelled) {
-          try { window.AndroidPay.onPaymentCancelled(); } catch(e) {}
+          window.AndroidPay.onPaymentCancelled();
         } else {
           window.location = 'paypal://cancel';
         }
@@ -63,6 +65,7 @@
       onError: function (err) {
         document.getElementById('status').innerText = 'Error en pago: ' + (err && err.message ? err.message : err);
         console.error('PayPal error', err);
+        alert("Error en pago: " + err);
       }
     }).render('#paypal-button-container');
 </script>
