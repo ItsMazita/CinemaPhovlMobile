@@ -13,6 +13,7 @@
     <!-- Fondo / texto sobre fondo -->
     <color name="background">#FFFFFF</color>
     <color name="onBackground">#212121</color>
+    <color name="colorAccent">#FFEB3B</color> <!-- amarillo -->
 
     <!-- Colores auxiliares -->
     <color name="white">#FFFFFF</color>

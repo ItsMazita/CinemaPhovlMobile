@@ -34,6 +34,8 @@ android {
 
 dependencies {
 
+    implementation(libs.flexbox)
+
     implementation(libs.zxing.core)
     implementation(libs.cardview)
 

@@ -1,7 +1,9 @@
 package com.phovl.cinemaphovlmobile.adapter;
 
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,6 +14,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
@@ -78,20 +81,17 @@ public class PeliculaAdapter extends RecyclerView.Adapter<PeliculaAdapter.ViewHo
         // Manejo de URL nula o vacía
         String url = p.getCarteleraUrl();
         if (url == null || url.trim().isEmpty()) {
-            // Cargar placeholder local si no hay URL
             Glide.with(context)
                     .load(R.drawable.ic_launcher_foreground)
                     .apply(options)
                     .into(holder.imgCartelera);
         } else {
-            // Intentar cargar la URL remota
             try {
                 Glide.with(context)
                         .load(url)
                         .apply(options)
                         .into(holder.imgCartelera);
             } catch (Exception e) {
-                // En caso de error inesperado, cargar placeholder
                 Glide.with(context)
                         .load(R.drawable.ic_launcher_foreground)
                         .apply(options)
@@ -103,27 +103,73 @@ public class PeliculaAdapter extends RecyclerView.Adapter<PeliculaAdapter.ViewHo
                 Toast.makeText(context, "Ver tráiler de " + p.getTitulo(), Toast.LENGTH_SHORT).show()
         );
 
+        // --- DOBLADAS ---
         holder.horariosDoblados.removeAllViews();
-        for (Funcion f : p.getFuncionesDobladas()) {
-            Button btn = crearBotonHorario(f);
-            holder.horariosDoblados.addView(btn);
+        if (p.getFuncionesDobladas() != null) {
+            for (Funcion f : p.getFuncionesDobladas()) {
+                Button btn = crearBotonHorario(f);
+                holder.horariosDoblados.addView(btn);
+            }
         }
 
+        // --- SUBTITULADAS ---
         holder.horariosSubtitulados.removeAllViews();
-        for (Funcion f : p.getFuncionesSubtituladas()) {
-            Button btn = crearBotonHorario(f);
-            holder.horariosSubtitulados.addView(btn);
+        if (p.getFuncionesSubtituladas() != null) {
+            for (Funcion f : p.getFuncionesSubtituladas()) {
+                Button btn = crearBotonHorario(f);
+                holder.horariosSubtitulados.addView(btn);
+            }
         }
     }
 
+    /**
+     * Crea un botón de horario con márgenes, padding y colores consistentes.
+     * No cambia tu paleta: mantiene fondo amarillo y texto negro por defecto.
+     */
     private Button crearBotonHorario(Funcion f) {
         Button btn = new Button(context);
+
+        // Texto y apariencia básica
         btn.setText(f.getHora());
-        btn.setBackgroundColor(Color.YELLOW);
+        btn.setAllCaps(false);
         btn.setTextColor(Color.BLACK);
-        btn.setPadding(16, 8, 16, 8);
-        btn.setOnClickListener(v -> listener.onHorarioClick(f));
+        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+
+        // Padding en dp -> px
+        int padH = dpToPx(12);
+        int padV = dpToPx(6);
+        btn.setPadding(padH, padV, padH, padV);
+
+        // Color de fondo (amarillo) usando tint para compatibilidad
+        int amarillo = ContextCompat.getColor(context, R.color.colorAccent /* reemplaza si tienes otro amarillo */);
+        // Si quieres mantener exactamente Color.YELLOW, descomenta la línea siguiente y comenta la de arriba:
+        // int amarillo = Color.YELLOW;
+        btn.setBackgroundTintList(ColorStateList.valueOf(amarillo));
+
+        // LayoutParams con márgenes para que no queden pegados
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        int margin = dpToPx(6);
+        lp.setMargins(margin, margin, margin, margin);
+        btn.setLayoutParams(lp);
+
+        // Tamaño mínimo para facilitar toque
+        btn.setMinHeight(dpToPx(40));
+        btn.setMinWidth(dpToPx(64));
+
+        // Click
+        btn.setOnClickListener(v -> {
+            // Llamar al listener con la función seleccionada
+            if (listener != null) listener.onHorarioClick(f);
+        });
+
         return btn;
+    }
+
+    private int dpToPx(int dp) {
+        return Math.round(dp * context.getResources().getDisplayMetrics().density);
     }
 
     @Override

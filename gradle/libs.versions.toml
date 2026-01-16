@@ -15,7 +15,7 @@ gson = "2.8.9"
 lifecycle = "2.6.1"
 cardview = "1.0.0"
 zxing = "3.5.1"
-
+flexbox = "3.0.0"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -36,7 +36,7 @@ gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 lifecycle-runtime = { group = "androidx.lifecycle", name = "lifecycle-runtime", version.ref = "lifecycle" }
 cardview = { group = "androidx.cardview", name = "cardview", version.ref = "cardview" }
 zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
-
+flexbox = { group = "com.google.android.flexbox", name = "flexbox", version.ref = "flexbox" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
