@@ -437,13 +437,21 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
         });
     }
 
+    private String safeFileName(String raw) {
+        if (raw == null) return null;
+        // Reemplaza caracteres inválidos por guión bajo
+        String s = raw.replaceAll("[^a-zA-Z0-9\\- _]", "_");
+        // Reemplaza espacios múltiples por uno solo y recorta
+        s = s.replaceAll("\\s+", " ").trim();
+        if (s.length() > 60) s = s.substring(0, 60).trim();
+        // Cambia espacios por guiones bajos para mayor compatibilidad
+        s = s.replace(' ', '_');
+        return s;
+    }
+
     /**
      * Genera un PDF por cada asiento/ticket y lo guarda en Descargas/CinemaPHOVL.
-     * Diseño mejorado: header con color, logo (si existe), QR grande, perforación y talón.
-     * Ejecutar en background (pdfExecutor).
-     *
-     * Ahora recibe nombrePeliculaLocal para garantizar que el título viaja correctamente
-     * desde Sucursal -> Boletos -> SeleccionAsientos y se usa en el hilo background.
+     * Ahora recibe nombrePeliculaLocal para garantizar que el título viaja correctamente.
      */
     private void generarPdfPorTicket(
             List<Asiento> seleccionados,
@@ -466,11 +474,18 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
             String qrContent = (i < qrCodes.size()) ? qrCodes.get(i) : UUID.randomUUID().toString();
 
             // Normaliza el nombre de la película para usarlo como nombre de archivo
-            String safeName = (nombrePeliculaLocal != null && !nombrePeliculaLocal.isEmpty())
-                    ? nombrePeliculaLocal.replaceAll("[^a-zA-Z0-9\\-_]", "_")
+            String baseName = (nombrePeliculaLocal != null && !nombrePeliculaLocal.isEmpty())
+                    ? safeFileName(nombrePeliculaLocal)
                     : "ticket_funcion_" + idFuncion;
 
-            String displayName = safeName + "_asiento_" + a.getId() + ".pdf";
+            // Sufijo para evitar colisiones y para identificar asiento
+            String seatSuffix = "_asiento_" + a.getId();
+            // Timestamp corto opcional para evitar duplicados exactos
+            String ts = "_" + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+
+            // Construye el nombre final. Si quieres SOLO el nombre de la película,
+            // usa: String displayName = baseName + ".pdf";
+            String displayName = baseName + seatSuffix + ts + ".pdf";
 
             PdfDocument document = new PdfDocument();
             PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(595, 842, 1).create();
@@ -546,6 +561,7 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
             finish();
         });
     }
+
 
     /**
      * Dibuja la plantilla mejorada del ticket en el canvas.

@@ -1,26 +1,63 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:background="@drawable/bg_movie_card"
-    android:backgroundTint="@color/colorPrimaryVariant"
     android:layout_margin="8dp"
-    android:padding="12dp">
+    app:cardCornerRadius="10dp"
+    app:cardElevation="4dp"
+    android:foreground="?attr/selectableItemBackground"
+    android:backgroundTint="@color/colorPrimaryVariant">
 
-    <TextView
-        android:id="@+id/tvName"
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="ticket_funcion_..."
-        android:textSize="16sp"
-        android:textColor="@android:color/black" />
+        android:padding="12dp">
 
-    <TextView
-        android:id="@+id/tvPath"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Downloads/CinemaPHOVL"
-        android:textSize="12sp"
-        android:textColor="@android:color/darker_gray" />
-</LinearLayout>
+        <!-- Título grande: nombre de la película (16sp bold) -->
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Nombre de la película"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/colorSecondary"
+            android:maxLines="2"
+            android:ellipsize="end"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginEnd="0dp" />
+
+        <!-- Subtítulo: asiento y función (13sp) -->
+        <TextView
+            android:id="@+id/tvSubtitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Asiento D3 • Función 2164"
+            android:textSize="13sp"
+            android:textColor="@android:color/darker_gray"
+            android:maxLines="1"
+            android:ellipsize="end"
+            app:layout_constraintStart_toStartOf="@id/tvTitle"
+            app:layout_constraintTop_toBottomOf="@id/tvTitle"
+            app:layout_constraintEnd_toEndOf="@id/tvTitle"
+            android:layout_marginTop="6dp" />
+
+        <!-- Meta: fecha/hora y precio (11sp, gris) -->
+        <TextView
+            android:id="@+id/tvMeta"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="16/01/2026 17:30 • 85.00 MXN"
+            android:textSize="11sp"
+            android:textColor="@android:color/darker_gray"
+            app:layout_constraintStart_toStartOf="@id/tvTitle"
+            app:layout_constraintTop_toBottomOf="@id/tvSubtitle"
+            app:layout_constraintEnd_toEndOf="@id/tvTitle"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="4dp" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>
