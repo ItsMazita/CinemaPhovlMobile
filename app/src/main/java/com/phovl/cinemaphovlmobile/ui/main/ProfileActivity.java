@@ -155,6 +155,8 @@ public class ProfileActivity extends AppCompatActivity {
         List<PurchaseItem> out = new ArrayList<>();
         final String targetFolder = "CinemaPHOVL";
 
+        int currentUserId = sessionManager.getUserId(); // <-- usuario actual
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             Uri collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI;
             String selection = MediaStore.MediaColumns.MIME_TYPE + "=? AND " +
@@ -176,8 +178,12 @@ public class ProfileActivity extends AppCompatActivity {
                     int dateIdx = c.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_MODIFIED);
 
                     while (c.moveToNext()) {
-                        long id = c.getLong(idIdx);
                         String name = c.getString(nameIdx);
+
+                        // filtro por userId en el nombre
+                        if (!name.contains("usuario" + currentUserId)) continue;
+
+                        long id = c.getLong(idIdx);
                         long size = c.getLong(sizeIdx);
                         long dateSec = c.getLong(dateIdx);
                         Uri contentUri = ContentUris.withAppendedId(collection, id);
@@ -196,6 +202,10 @@ public class ProfileActivity extends AppCompatActivity {
                 if (files != null) {
                     for (File f : files) {
                         String name = f.getName();
+
+                        // filtro por userId en el nombre
+                        if (!name.contains("usuario" + currentUserId)) continue;
+
                         long size = f.length();
                         long date = f.lastModified();
                         Uri uri = Uri.fromFile(f);
@@ -207,6 +217,7 @@ public class ProfileActivity extends AppCompatActivity {
         }
         return out;
     }
+
 
     private String extractFuncionFromName(String filename) {
         try {

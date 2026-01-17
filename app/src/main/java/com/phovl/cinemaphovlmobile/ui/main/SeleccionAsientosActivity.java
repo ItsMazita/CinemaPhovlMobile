@@ -541,7 +541,9 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
 
             // Construye el nombre final. Si quieres SOLO el nombre de la película,
             // usa: String displayName = baseName + ".pdf";
-            String displayName = baseName + seatSuffix + ts + ".pdf";
+            int userId = sessionManager.getUserId(); // usuario actual
+            String displayName = baseName + seatSuffix + "_usuario" + userId + ts + ".pdf";
+
 
             PdfDocument document = new PdfDocument();
             PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(595, 842, 1).create();
