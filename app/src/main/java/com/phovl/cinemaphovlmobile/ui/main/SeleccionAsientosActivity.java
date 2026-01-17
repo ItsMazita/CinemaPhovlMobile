@@ -86,6 +86,9 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
     // Executor para generar PDFs en background
     private final Executor pdfExecutor = Executors.newSingleThreadExecutor();
 
+    // NUEVO: nombre de la película (se recibe por Intent)
+    private String nombrePelicula;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -96,6 +99,7 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
         idFuncion = getIntent().getIntExtra("idFuncion", 0);
         totalBoletos = getIntent().getIntExtra("totalBoletos", 0);
         totalPrecio = getIntent().getIntExtra("totalPrecio", 0);
+        nombrePelicula = getIntent().getStringExtra("nombrePelicula"); // <-- nuevo
 
         recyclerAsientos = findViewById(R.id.recycler_asientos_grid);
         progressBar = findViewById(R.id.progress_asientos);
@@ -453,7 +457,12 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
             Asiento a = seleccionados.get(i);
             String qrContent = (i < qrCodes.size()) ? qrCodes.get(i) : UUID.randomUUID().toString();
 
-            String displayName = "ticket_funcion_" + idFuncion + "_asiento_" + a.getId() + "_" + System.currentTimeMillis() + ".pdf";
+            // Normaliza el nombre de la película para usarlo como nombre de archivo
+            String safeName = (nombrePelicula != null && !nombrePelicula.isEmpty())
+                    ? nombrePelicula.replaceAll("[^a-zA-Z0-9\\-_]", "_")
+                    : "ticket_funcion_" + idFuncion;
+
+            String displayName = safeName + "_asiento_" + a.getId() + ".pdf";
 
             PdfDocument document = new PdfDocument();
             PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(595, 842, 1).create();
@@ -461,7 +470,7 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
             Canvas canvas = page.getCanvas();
 
             try {
-                // Dibuja plantilla mejorada
+                // Dibuja plantilla mejorada (ahora incluye nombre de la película)
                 drawTicketPage(canvas, pageInfo, idFuncion, a, qrContent, orderId);
             } catch (Exception e) {
                 Log.w(TAG, "Error dibujando ticket para " + a.getId(), e);
@@ -571,6 +580,9 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
         paint.setTextSize(12f);
 
         y = 120;
+        // NUEVO: mostrar nombre de la película
+        canvas.drawText("Película: " + (nombrePelicula != null ? nombrePelicula : "N/A"), x, y, paint);
+        y += 18;
         canvas.drawText("Función ID: " + idFuncion, x, y, paint);
         y += 18;
         canvas.drawText("Asiento: " + a.getId(), x, y, paint);
