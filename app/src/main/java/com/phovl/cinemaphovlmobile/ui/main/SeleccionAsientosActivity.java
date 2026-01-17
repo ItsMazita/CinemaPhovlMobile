@@ -100,6 +100,7 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
         totalBoletos = getIntent().getIntExtra("totalBoletos", 0);
         totalPrecio = getIntent().getIntExtra("totalPrecio", 0);
         nombrePelicula = getIntent().getStringExtra("nombrePelicula"); // <-- nuevo
+        Log.d(TAG, "onCreate nombrePelicula='" + nombrePelicula + "' idFuncion=" + idFuncion);
 
         recyclerAsientos = findViewById(R.id.recycler_asientos_grid);
         progressBar = findViewById(R.id.progress_asientos);
@@ -244,7 +245,9 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
                                         qrCodes.add(t.codigo_qr);
                                     }
                                     // Generar un PDF por ticket/asiento en background
-                                    pdfExecutor.execute(() -> generarPdfPorTicket(seleccionados, qrCodes, orderId));
+                                    final String nombreParaPdf = nombrePelicula; // captura el valor actual
+                                    Log.d(TAG, "Encolando generación PDF. nombreParaPdf='" + nombreParaPdf + "'");
+                                    pdfExecutor.execute(() -> generarPdfPorTicket(seleccionados, qrCodes, orderId, nombreParaPdf));
                                 } else {
                                     Toast.makeText(SeleccionAsientosActivity.this,
                                             "Compra registrada pero no se devolvieron tickets",
@@ -438,12 +441,17 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
      * Genera un PDF por cada asiento/ticket y lo guarda en Descargas/CinemaPHOVL.
      * Diseño mejorado: header con color, logo (si existe), QR grande, perforación y talón.
      * Ejecutar en background (pdfExecutor).
+     *
+     * Ahora recibe nombrePeliculaLocal para garantizar que el título viaja correctamente
+     * desde Sucursal -> Boletos -> SeleccionAsientos y se usa en el hilo background.
      */
     private void generarPdfPorTicket(
             List<Asiento> seleccionados,
             List<String> qrCodes,
-            String orderId
+            String orderId,
+            String nombrePeliculaLocal
     ) {
+        Log.d(TAG, "generarPdfPorTicket inicio. nombrePeliculaLocal='" + nombrePeliculaLocal + "'");
         if (seleccionados == null || seleccionados.isEmpty()) {
             runOnUiThread(() -> Toast.makeText(this,
                     "No hay asientos seleccionados para generar PDF",
@@ -458,8 +466,8 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
             String qrContent = (i < qrCodes.size()) ? qrCodes.get(i) : UUID.randomUUID().toString();
 
             // Normaliza el nombre de la película para usarlo como nombre de archivo
-            String safeName = (nombrePelicula != null && !nombrePelicula.isEmpty())
-                    ? nombrePelicula.replaceAll("[^a-zA-Z0-9\\-_]", "_")
+            String safeName = (nombrePeliculaLocal != null && !nombrePeliculaLocal.isEmpty())
+                    ? nombrePeliculaLocal.replaceAll("[^a-zA-Z0-9\\-_]", "_")
                     : "ticket_funcion_" + idFuncion;
 
             String displayName = safeName + "_asiento_" + a.getId() + ".pdf";
@@ -470,8 +478,8 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
             Canvas canvas = page.getCanvas();
 
             try {
-                // Dibuja plantilla mejorada (ahora incluye nombre de la película)
-                drawTicketPage(canvas, pageInfo, idFuncion, a, qrContent, orderId);
+                // Dibuja plantilla mejorada (ahora incluye nombre de la película pasado como parámetro)
+                drawTicketPage(canvas, pageInfo, idFuncion, a, qrContent, orderId, nombrePeliculaLocal);
             } catch (Exception e) {
                 Log.w(TAG, "Error dibujando ticket para " + a.getId(), e);
             }
@@ -541,8 +549,9 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
 
     /**
      * Dibuja la plantilla mejorada del ticket en el canvas.
+     * Ahora recibe nombrePeliculaLocal para evitar depender del estado de instancia en el hilo.
      */
-    private void drawTicketPage(Canvas canvas, PdfDocument.PageInfo pageInfo, int idFuncion, Asiento a, String qrContent, String orderId) {
+    private void drawTicketPage(Canvas canvas, PdfDocument.PageInfo pageInfo, int idFuncion, Asiento a, String qrContent, String orderId, String nombrePeliculaLocal) {
         Paint paint = new Paint();
         int margin = 36;
         int x = margin;
@@ -580,8 +589,8 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
         paint.setTextSize(12f);
 
         y = 120;
-        // NUEVO: mostrar nombre de la película
-        canvas.drawText("Película: " + (nombrePelicula != null ? nombrePelicula : "N/A"), x, y, paint);
+        // Mostrar nombre de la película usando el parámetro local
+        canvas.drawText("Película: " + (nombrePeliculaLocal != null ? nombrePeliculaLocal : "N/A"), x, y, paint);
         y += 18;
         canvas.drawText("Función ID: " + idFuncion, x, y, paint);
         y += 18;

@@ -82,12 +82,14 @@ public class SucursalActivity extends AppCompatActivity {
         cargarPeliculasConFunciones();
     }
 
-    private void onHorarioClick(Funcion funcion) {
-        // Al tocar un horario abrimos BoletosActivity con idFuncion
+    // Nueva firma: recibe funcion y titulo
+    private void onHorarioClick(Funcion funcion, String tituloPelicula) {
         Intent intent = new Intent(SucursalActivity.this, BoletosActivity.class);
         intent.putExtra("idFuncion", funcion.getId());
+        intent.putExtra("nombrePelicula", tituloPelicula); // <-- pasa el título
         startActivity(intent);
     }
+
 
     private void cargarPeliculasConFunciones() {
         showLoading(true);

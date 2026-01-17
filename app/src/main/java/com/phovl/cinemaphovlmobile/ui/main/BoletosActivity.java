@@ -29,6 +29,8 @@ public class BoletosActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_boletos);
 
+        final String nombrePelicula = getIntent().getStringExtra("nombrePelicula");
+
         int idFuncion = getIntent().getIntExtra("idFuncion", 0);
 
         txtTotal = findViewById(R.id.txtTotal);
@@ -80,7 +82,9 @@ public class BoletosActivity extends AppCompatActivity {
             intent.putExtra("idFuncion", idFuncion);
             intent.putExtra("totalBoletos", totalBoletos);
             intent.putExtra("totalPrecio", totalPrecio);
+            intent.putExtra("nombrePelicula", nombrePelicula); // <-- reenvías el título
             startActivity(intent);
+
         });
 
         actualizarUI();

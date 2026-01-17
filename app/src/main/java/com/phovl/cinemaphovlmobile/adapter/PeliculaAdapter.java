@@ -27,7 +27,8 @@ import java.util.List;
 
 public class PeliculaAdapter extends RecyclerView.Adapter<PeliculaAdapter.ViewHolder> {
 
-    public interface OnHorarioClickListener { void onHorarioClick(Funcion funcion); }
+    // Ahora el listener recibe también el título de la película
+    public interface OnHorarioClickListener { void onHorarioClick(Funcion funcion, String tituloPelicula); }
 
     private final List<PeliculaConFunciones> lista;
     private final OnHorarioClickListener listener;
@@ -72,30 +73,19 @@ public class PeliculaAdapter extends RecyclerView.Adapter<PeliculaAdapter.ViewHo
         holder.txtClasificacionDuracion.setText(p.getClasificacion() + " • " + p.getDuracion());
         holder.txtSinopsis.setText(p.getSinopsis());
 
-        // RequestOptions para placeholder, error y centerCrop
         RequestOptions options = new RequestOptions()
                 .centerCrop()
                 .placeholder(R.drawable.ic_launcher_foreground)
                 .error(R.drawable.ic_launcher_foreground);
 
-        // Manejo de URL nula o vacía
         String url = p.getCarteleraUrl();
         if (url == null || url.trim().isEmpty()) {
-            Glide.with(context)
-                    .load(R.drawable.ic_launcher_foreground)
-                    .apply(options)
-                    .into(holder.imgCartelera);
+            Glide.with(context).load(R.drawable.ic_launcher_foreground).apply(options).into(holder.imgCartelera);
         } else {
             try {
-                Glide.with(context)
-                        .load(url)
-                        .apply(options)
-                        .into(holder.imgCartelera);
+                Glide.with(context).load(url).apply(options).into(holder.imgCartelera);
             } catch (Exception e) {
-                Glide.with(context)
-                        .load(R.drawable.ic_launcher_foreground)
-                        .apply(options)
-                        .into(holder.imgCartelera);
+                Glide.with(context).load(R.drawable.ic_launcher_foreground).apply(options).into(holder.imgCartelera);
             }
         }
 
@@ -107,7 +97,7 @@ public class PeliculaAdapter extends RecyclerView.Adapter<PeliculaAdapter.ViewHo
         holder.horariosDoblados.removeAllViews();
         if (p.getFuncionesDobladas() != null) {
             for (Funcion f : p.getFuncionesDobladas()) {
-                Button btn = crearBotonHorario(f);
+                Button btn = crearBotonHorario(f, p.getTitulo());
                 holder.horariosDoblados.addView(btn);
             }
         }
@@ -116,7 +106,7 @@ public class PeliculaAdapter extends RecyclerView.Adapter<PeliculaAdapter.ViewHo
         holder.horariosSubtitulados.removeAllViews();
         if (p.getFuncionesSubtituladas() != null) {
             for (Funcion f : p.getFuncionesSubtituladas()) {
-                Button btn = crearBotonHorario(f);
+                Button btn = crearBotonHorario(f, p.getTitulo());
                 holder.horariosSubtitulados.addView(btn);
             }
         }
@@ -124,29 +114,23 @@ public class PeliculaAdapter extends RecyclerView.Adapter<PeliculaAdapter.ViewHo
 
     /**
      * Crea un botón de horario con márgenes, padding y colores consistentes.
-     * No cambia tu paleta: mantiene fondo amarillo y texto negro por defecto.
+     * Ahora recibe también el título de la película para pasarlo al listener.
      */
-    private Button crearBotonHorario(Funcion f) {
+    private Button crearBotonHorario(Funcion f, String tituloPelicula) {
         Button btn = new Button(context);
 
-        // Texto y apariencia básica
         btn.setText(f.getHora());
         btn.setAllCaps(false);
         btn.setTextColor(Color.BLACK);
         btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
 
-        // Padding en dp -> px
         int padH = dpToPx(12);
         int padV = dpToPx(6);
         btn.setPadding(padH, padV, padH, padV);
 
-        // Color de fondo (amarillo) usando tint para compatibilidad
-        int amarillo = ContextCompat.getColor(context, R.color.colorAccent /* reemplaza si tienes otro amarillo */);
-        // Si quieres mantener exactamente Color.YELLOW, descomenta la línea siguiente y comenta la de arriba:
-        // int amarillo = Color.YELLOW;
+        int amarillo = ContextCompat.getColor(context, R.color.colorAccent);
         btn.setBackgroundTintList(ColorStateList.valueOf(amarillo));
 
-        // LayoutParams con márgenes para que no queden pegados
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -155,14 +139,12 @@ public class PeliculaAdapter extends RecyclerView.Adapter<PeliculaAdapter.ViewHo
         lp.setMargins(margin, margin, margin, margin);
         btn.setLayoutParams(lp);
 
-        // Tamaño mínimo para facilitar toque
         btn.setMinHeight(dpToPx(40));
         btn.setMinWidth(dpToPx(64));
 
-        // Click
         btn.setOnClickListener(v -> {
-            // Llamar al listener con la función seleccionada
-            if (listener != null) listener.onHorarioClick(f);
+            // Llamar al listener con la función seleccionada y el título de la película
+            if (listener != null) listener.onHorarioClick(f, tituloPelicula);
         });
 
         return btn;
