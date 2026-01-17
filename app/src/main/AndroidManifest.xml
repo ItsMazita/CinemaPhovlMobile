@@ -16,6 +16,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CinemaPhovIMobile">
         <activity
+            android:name=".ui.main.PdfRendererActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.main.WebViewPayPalActivity"
             android:exported="false" />
         <activity

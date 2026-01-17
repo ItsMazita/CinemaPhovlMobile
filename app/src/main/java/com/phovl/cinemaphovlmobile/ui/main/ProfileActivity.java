@@ -9,6 +9,7 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.view.View;
 import android.widget.Button;
@@ -68,6 +69,9 @@ public class ProfileActivity extends AppCompatActivity {
         // Edge-to-edge padding (igual que antes)
         setContentView(R.layout.activity_profile);
 
+        Button btnBack = findViewById(R.id.btnBack);
+        btnBack.setOnClickListener(v -> finish());
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -93,9 +97,9 @@ public class ProfileActivity extends AppCompatActivity {
         rvPurchases = findViewById(R.id.rvPurchases);
         progress = findViewById(R.id.progressPurchases);
 
-        int span = 2;
+        int span = 2; // lista vertical; si quieres grid usa >1
         rvPurchases.setLayoutManager(new GridLayoutManager(this, span));
-        adapter = new PurchasesAdapter(items, item -> openPdf(item), this);
+        adapter = new com.phovl.cinemaphovlmobile.adapter.PurchasesAdapter(items, item -> openPdf(item));
         rvPurchases.setAdapter(adapter);
 
         // Pedir permiso si es necesario (API < Q)
@@ -128,86 +132,19 @@ public class ProfileActivity extends AppCompatActivity {
         if (item == null || item.uri == null) return;
 
         Uri uri = item.uri;
-        Log.d("PDF_DEBUG", "openPdf invoked. URI: " + uri + " scheme=" + (uri != null ? uri.getScheme() : "null"));
 
-        // 1) Intent interno (vista previa propia)
-        Intent internal = new Intent(this, PdfPreviewActivity.class);
-        internal.putExtra(PdfPreviewActivity.EXTRA_URI, uri);
+        // Lanzar visor interno con PdfRendererActivity
+        Intent internal = new Intent(this, PdfRendererActivity.class);
+        internal.putExtra(PdfRendererActivity.EXTRA_URI, uri.toString());
         internal.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        try {
-            startActivity(internal);
-            Log.d("PDF_DEBUG", "La vista interna se lanzó correctamente.");
-            return;
-        } catch (Exception e) {
-            Log.w("PDF_DEBUG", "Fallo al lanzar vista interna, se intentará fallback externo", e);
+        // Si uri es file:// y API >= N, convierte con FileProvider antes de poner extra
+        if ("file".equals(uri.getScheme()) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            File f = new File(uri.getPath());
+            Uri contentUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", f);
+            internal.putExtra(PdfRendererActivity.EXTRA_URI, contentUri.toString());
+            internal.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         }
-
-        // 2) Diagnóstico: comprobar si el URI es accesible desde esta app
-        try {
-            InputStream is = getContentResolver().openInputStream(uri);
-            if (is != null) {
-                is.close();
-                Log.d("PDF_DEBUG", "InputStream OK para URI: " + uri);
-            } else {
-                Log.w("PDF_DEBUG", "openInputStream devolvió null para URI: " + uri);
-            }
-        } catch (Exception e) {
-            Log.e("PDF_DEBUG", "openInputStream fallo para URI: " + uri, e);
-        }
-
-        // 3) Preparar intent externo
-        Intent external = new Intent(Intent.ACTION_VIEW);
-        external.setDataAndType(uri, "application/pdf");
-        external.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-
-        // 4) Adjuntar ClipData para API >= N (asegura permisos a apps externas)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            try {
-                ClipData clip = ClipData.newUri(getContentResolver(), "pdf", uri);
-                external.setClipData(clip);
-                Log.d("PDF_DEBUG", "ClipData adjuntado al intent externo.");
-            } catch (Exception ex) {
-                Log.w("PDF_DEBUG", "No se pudo adjuntar ClipData", ex);
-            }
-        }
-
-        // 5) Listar handlers disponibles (diagnóstico)
-        PackageManager pm = getPackageManager();
-        List<android.content.pm.ResolveInfo> handlers = pm.queryIntentActivities(external, PackageManager.MATCH_DEFAULT_ONLY);
-        int handlersCount = handlers != null ? handlers.size() : 0;
-        Log.d("PDF_DEBUG", "Handlers count: " + handlersCount);
-        if (handlersCount > 0) {
-            for (android.content.pm.ResolveInfo r : handlers) {
-                Log.d("PDF_DEBUG", "Handler: " + r.activityInfo.packageName + "/" + r.activityInfo.name);
-            }
-        }
-
-        // 6) Conceder permiso explícito a cada app que pueda manejar el intent
-        if (handlers != null) {
-            for (android.content.pm.ResolveInfo resolveInfo : handlers) {
-                String packageName = resolveInfo.activityInfo.packageName;
-                try {
-                    grantUriPermission(packageName, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                    Log.d("PDF_DEBUG", "grantUriPermission a: " + packageName);
-                } catch (Exception ex) {
-                    Log.w("PDF_DEBUG", "grantUriPermission fallo para: " + packageName, ex);
-                }
-            }
-        }
-
-        // 7) Lanzar chooser si hay apps, si no mostrar toast
-        if (external.resolveActivity(pm) != null) {
-            try {
-                startActivity(Intent.createChooser(external, "Abrir PDF con"));
-                Log.d("PDF_DEBUG", "Intent externo lanzado (chooser).");
-            } catch (Exception e) {
-                Log.e("PDF_DEBUG", "Error lanzando intent externo", e);
-                Toast.makeText(this, "No se pudo abrir el PDF con aplicaciones externas", Toast.LENGTH_SHORT).show();
-            }
-        } else {
-            Log.w("PDF_DEBUG", "No hay aplicación que maneje application/pdf (handlersCount=0).");
-            Toast.makeText(this, "No hay aplicación para abrir PDF", Toast.LENGTH_SHORT).show();
-        }
+        startActivity(internal);
     }
 
     /**
@@ -222,7 +159,7 @@ public class ProfileActivity extends AppCompatActivity {
             Uri collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI;
             String selection = MediaStore.MediaColumns.MIME_TYPE + "=? AND " +
                     MediaStore.MediaColumns.RELATIVE_PATH + " LIKE ?";
-            String[] selArgs = new String[] { "application/pdf", "%" + File.separator + targetFolder + "%" };
+            String[] selArgs = new String[] { "application/pdf", Environment.DIRECTORY_DOWNLOADS + "/" + targetFolder + "/%" };
 
             String[] projection = new String[] {
                     MediaStore.MediaColumns._ID,
@@ -252,7 +189,7 @@ public class ProfileActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
         } else {
-            File downloads = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS);
+            File downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
             File folder = new File(downloads, targetFolder);
             if (folder.exists() && folder.isDirectory()) {
                 File[] files = folder.listFiles((dir, name) -> name.toLowerCase().endsWith(".pdf"));
@@ -291,4 +228,5 @@ public class ProfileActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         // No usado porque usamos ActivityResultLauncher, pero lo dejo por compatibilidad
     }
+
 }
