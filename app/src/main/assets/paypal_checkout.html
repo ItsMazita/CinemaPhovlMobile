@@ -48,7 +48,7 @@
           if (window.AndroidPay && window.AndroidPay.onPaymentCompleted) {
             window.AndroidPay.onPaymentCompleted(orderId);
           } else {
-            window.location = 'paypal://success?orderId=' + encodeURIComponent(orderId);
+            window.location = 'Compra Exitosa!';
           }
         });
       },
@@ -58,7 +58,7 @@
         if (window.AndroidPay && window.AndroidPay.onPaymentCancelled) {
           window.AndroidPay.onPaymentCancelled();
         } else {
-          window.location = 'paypal://cancel';
+          window.location = 'Compra Cancelada';
         }
       },
 

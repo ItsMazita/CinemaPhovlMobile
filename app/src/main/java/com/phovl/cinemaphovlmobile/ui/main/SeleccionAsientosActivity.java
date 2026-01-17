@@ -1,7 +1,9 @@
 package com.phovl.cinemaphovlmobile.ui.main;
 
+import android.Manifest;
 import android.content.ContentValues;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -22,6 +24,15 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+
+import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
+
+
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -37,6 +48,7 @@ import com.phovl.cinemaphovlmobile.network.ApiService;
 import com.phovl.cinemaphovlmobile.network.RetrofitClient;
 import com.phovl.cinemaphovlmobile.session.SessionManager;
 import com.phovl.cinemaphovlmobile.util.GridSpacingItemDecoration;
+import com.phovl.cinemaphovlmobile.ui.main.ProfileActivity;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -93,6 +105,17 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_seleccion_asientos);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    "compras_channel",
+                    "Compras",
+                    NotificationManager.IMPORTANCE_HIGH
+            );
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            manager.createNotificationChannel(channel);
+        }
+
 
         sessionManager = new SessionManager(this);
 
@@ -181,6 +204,39 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
         txtSelectedCount.setText("Boletos seleccionados: 0");
         btnConfirmar.setEnabled(false);
     }
+
+    private void mostrarNotificacionCompraExitosa() {
+        // Intent que abre la pantalla de perfil
+        Intent intent = new Intent(this, com.phovl.cinemaphovlmobile.ui.main.ProfileActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                this, 0, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "compras_channel")
+                .setSmallIcon(R.drawable.ic_profile) // usa un icono de tu app
+                .setContentTitle("Compra exitosa")
+                .setContentText("Tus boletos se generaron correctamente. Toca para ver tu perfil.")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .setContentIntent(pendingIntent);
+
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        notificationManager.notify(1001, builder.build());
+    }
+
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
@@ -553,6 +609,7 @@ public class SeleccionAsientosActivity extends AppCompatActivity {
         final int finalGenerated = generated;
         runOnUiThread(() -> {
             Toast.makeText(this, "Se generaron " + finalGenerated + " PDFs en Descargas/CinemaPHOVL", Toast.LENGTH_LONG).show();
+            mostrarNotificacionCompraExitosa();
 
             // Regresar a MainActivity
             Intent intent = new Intent(SeleccionAsientosActivity.this, com.phovl.cinemaphovlmobile.ui.main.MainActivity.class);
